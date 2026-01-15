@@ -1,4 +1,9 @@
-USE CinemaDB;
+CREATE DATABASE [CinemaDB];
+GO 
+
+USE [CinemaDB];
+GO
+
 CREATE TABLE [users] (
 	[id] int IDENTITY(1,1) NOT NULL,
 	[email] nvarchar(255) NOT NULL,
@@ -57,16 +62,11 @@ CREATE TABLE [tickets] (
 	PRIMARY KEY ([id])
 );
 
-
-
-
-
 ALTER TABLE [moviegenres] ADD CONSTRAINT [moviegenres_fk0] FOREIGN KEY ([movie_id]) REFERENCES [movies]([id]);
-
 ALTER TABLE [moviegenres] ADD CONSTRAINT [moviegenres_fk1] FOREIGN KEY ([genre_id]) REFERENCES [genres]([id]);
+
 ALTER TABLE [sessions] ADD CONSTRAINT [sessions_fk1] FOREIGN KEY ([movie_id]) REFERENCES [movies]([id]);
-
 ALTER TABLE [sessions] ADD CONSTRAINT [sessions_fk2] FOREIGN KEY ([hall_id]) REFERENCES [halls]([id]);
-ALTER TABLE [tickets] ADD CONSTRAINT [tickets_fk1] FOREIGN KEY ([user_id]) REFERENCES [users]([id]);
 
+ALTER TABLE [tickets] ADD CONSTRAINT [tickets_fk1] FOREIGN KEY ([user_id]) REFERENCES [users]([id]);
 ALTER TABLE [tickets] ADD CONSTRAINT [tickets_fk2] FOREIGN KEY ([session_id]) REFERENCES [sessions]([id]);
