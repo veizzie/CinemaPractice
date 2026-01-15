@@ -1,0 +1,2 @@
+# CinemaPractice
+Practice project SoftServe
