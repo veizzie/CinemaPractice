@@ -22,7 +22,6 @@ CREATE TABLE [movies] (
 	[duration] int NOT NULL,
 	[release_date] datetime NOT NULL,
 	[poster_url] nvarchar(255) NOT NULL,
-	[trailer_url] nvarchar(255) NOT NULL,
 	PRIMARY KEY ([id])
 );
 
