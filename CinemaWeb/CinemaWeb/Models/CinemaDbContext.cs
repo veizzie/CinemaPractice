@@ -88,21 +88,21 @@ public partial class CinemaDbContext : DbContext
 
         modelBuilder.Entity<Moviegenre>(entity =>
         {
-            entity
-                .HasNoKey()
-                .ToTable("moviegenres");
+            entity.HasKey(e => new {e.MovieId, e.GenreId }).HasName("PK__moviegen__C6D8E3B2D3B8F1E3");
+
+            entity.ToTable("moviegenres");
 
             entity.Property(e => e.GenreId).HasColumnName("genre_id");
             entity.Property(e => e.MovieId).HasColumnName("movie_id");
 
             entity.HasOne(d => d.Genre).WithMany()
                 .HasForeignKey(d => d.GenreId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
+                .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("moviegenres_fk1");
 
             entity.HasOne(d => d.Movie).WithMany()
                 .HasForeignKey(d => d.MovieId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
+                .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("moviegenres_fk0");
         });
 
@@ -138,12 +138,12 @@ public partial class CinemaDbContext : DbContext
 
             entity.HasOne(d => d.Hall).WithMany(p => p.Sessions)
                 .HasForeignKey(d => d.HallId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
+                .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("sessions_fk2");
 
             entity.HasOne(d => d.Movie).WithMany(p => p.Sessions)
                 .HasForeignKey(d => d.MovieId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
+                .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("sessions_fk1");
         });
 
@@ -164,17 +164,17 @@ public partial class CinemaDbContext : DbContext
 
             entity.HasOne(d => d.Seat).WithMany(p => p.Tickets)
                 .HasForeignKey(d => d.SeatId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
+                .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("tickets_fk3");
 
             entity.HasOne(d => d.Session).WithMany(p => p.Tickets)
                 .HasForeignKey(d => d.SessionId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
+                .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("tickets_fk2");
 
             entity.HasOne(d => d.User).WithMany(p => p.Tickets)
                 .HasForeignKey(d => d.UserId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
+                .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("tickets_fk1");
         });
 
