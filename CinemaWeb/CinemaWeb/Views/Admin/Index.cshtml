@@ -1,0 +1,40 @@
+﻿@{
+    ViewData["Title"] = "Панель адміністратора";
+}
+
+<div class="text-center mb-5">
+    <h1 class="display-4">Панель адміністратора</h1>
+    <p class="lead">Керування контентом кінотеатру</p>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+                <h3 class="card-title">Жанри</h3>
+                <p class="card-text">Додавання та редагування жанрів фільмів.</p>
+                <a asp-controller="Genres" asp-action="Index" class="btn btn-primary w-100">Керувати жанрами</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+                <h3 class="card-title">Зали</h3>
+                <p class="card-text">Налаштування залів та кількості місць.</p>
+                <a asp-controller="Halls" asp-action="Index" class="btn btn-primary w-100">Керувати залами</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100 border-secondary">
+            <div class="card-body text-center text-muted">
+                <h3 class="card-title">Фільми</h3>
+                <p class="card-text">Незабаром...</p>
+                <button class="btn btn-secondary w-100" disabled>В розробці</button>
+            </div>
+        </div>
+    </div>
+</div>
