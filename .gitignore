@@ -480,3 +480,14 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# ------------------------------------
+# Custom Rules for CinemaWeb
+# ------------------------------------
+
+# Ігноруємо всі файли в папці images (щоб постери не пушились на Git)
+**/wwwroot/images/*
+
+# АЛЕ залишаємо ці файли (вони потрібні для роботи сайту)
+!**/wwwroot/images/no-poster.jpg
+!**/wwwroot/images/.gitkeep

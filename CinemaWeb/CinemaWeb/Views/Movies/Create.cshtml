@@ -1,68 +1,91 @@
 ﻿@model CinemaWeb.Models.Movie
 
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Створити фільм";
 }
 
-<h1>Create</h1>
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">Створити новий фільм</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" enctype="multipart/form-data">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-<h4>Movie</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="Title" class="control-label"></label>
-                <input asp-for="Title" class="form-control" />
-                <span asp-validation-for="Title" class="text-danger"></span>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label asp-for="Title" class="control-label fw-bold mb-1">Назва фільму</label>
+                                <input asp-for="Title" class="form-control" />
+                                <span asp-validation-for="Title" class="text-danger"></span>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label class="control-label fw-bold mb-1">Жанри (множинний вибір)</label>
+                                <select name="genreIds" class="form-control" asp-items="ViewBag.GenreId" multiple style="height: 120px;"></select>
+                                <small class="text-muted">Затисніть Ctrl для вибору кількох.</small>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label class="control-label fw-bold mb-1">Постер</label>
+                                <input type="file" name="posterImage" class="form-control" accept="image/*" />
+                                <span class="text-danger">@Html.ValidationMessage("posterImage")</span>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label asp-for="Price" class="control-label fw-bold mb-1">Ціна квитка (грн)</label>
+                                <input asp-for="Price" class="form-control" />
+                                <span asp-validation-for="Price" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label asp-for="Director" class="control-label fw-bold mb-1">Режисер</label>
+                                <input asp-for="Director" class="form-control" />
+                                <span asp-validation-for="Director" class="text-danger"></span>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label asp-for="Cast" class="control-label fw-bold mb-1">Актори</label>
+                                <input asp-for="Cast" class="form-control" placeholder="Том Круз, ..." />
+                                <span asp-validation-for="Cast" class="text-danger"></span>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label asp-for="Duration" class="control-label fw-bold mb-1">Тривалість (хв)</label>
+                                <input asp-for="Duration" class="form-control" type="number" min="1" />
+                                <span asp-validation-for="Duration" class="text-danger"></span>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label asp-for="ReleaseDate" class="control-label fw-bold mb-1">Дата прем'єри</label>
+                                <input asp-for="ReleaseDate" class="form-control" type="date" />
+                                <span asp-validation-for="ReleaseDate" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label asp-for="Description" class="control-label fw-bold mb-1">Опис</label>
+                        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-block mt-4">
+                        <input type="submit" value="Створити" class="btn btn-success" />
+                        <a asp-action="Index" class="btn btn-secondary">Назад до списку</a>
+                    </div>
+                </form>
             </div>
-            <div class="form-group">
-                <label asp-for="Description" class="control-label"></label>
-                <input asp-for="Description" class="form-control" />
-                <span asp-validation-for="Description" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Director" class="control-label"></label>
-                <input asp-for="Director" class="form-control" />
-                <span asp-validation-for="Director" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Cast" class="control-label"></label>
-                <input asp-for="Cast" class="form-control" />
-                <span asp-validation-for="Cast" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Duration" class="control-label"></label>
-                <input asp-for="Duration" class="form-control" />
-                <span asp-validation-for="Duration" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="ReleaseDate" class="control-label"></label>
-                <input asp-for="ReleaseDate" class="form-control" />
-                <span asp-validation-for="ReleaseDate" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="PosterUrl" class="control-label"></label>
-                <input asp-for="PosterUrl" class="form-control" />
-                <span asp-validation-for="PosterUrl" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Price" class="control-label"></label>
-                <input asp-for="Price" class="form-control" />
-                <span asp-validation-for="Price" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }
