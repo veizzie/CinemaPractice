@@ -30,5 +30,16 @@ namespace CinemaWeb.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
+
+        public async Task<IActionResult> Details(int? id)
+        {
+            if (id == null) return NotFound();
+
+            var movie = await _context.Movies.FirstOrDefaultAsync(m => m.Id == id);
+
+            if (movie == null) return NotFound();
+
+            return View(movie);
+        }
     }
 }
