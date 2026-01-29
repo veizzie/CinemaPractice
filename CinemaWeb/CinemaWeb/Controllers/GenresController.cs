@@ -6,9 +6,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using CinemaWeb.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CinemaWeb.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class GenresController : Controller
     {
         private readonly CinemaDbContext _context;
@@ -49,12 +51,18 @@ namespace CinemaWeb.Controllers
         }
 
         // POST: Genres/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,Name")] Genre genre)
         {
+            // Перевірка наявності жанру з таким самим ім'ям
+            bool genreExists = await _context.Genres.AnyAsync(g => g.Name == genre.Name);
+
+            if (genreExists)
+            {
+                ModelState.AddModelError("Name", "Такий жанр вже існує!");
+            }
+
             if (ModelState.IsValid)
             {
                 _context.Add(genre);
@@ -81,8 +89,6 @@ namespace CinemaWeb.Controllers
         }
 
         // POST: Genres/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Name")] Genre genre)
@@ -90,6 +96,13 @@ namespace CinemaWeb.Controllers
             if (id != genre.Id)
             {
                 return NotFound();
+            }
+
+            // Щоб не перейменувати жанр на той, що вже існує
+            bool genreExists = await _context.Genres.AnyAsync(g => g.Name == genre.Name && g.Id != genre.Id);
+            if (genreExists)
+            {
+                ModelState.AddModelError("Name", "Такий жанр вже існує!");
             }
 
             if (ModelState.IsValid)

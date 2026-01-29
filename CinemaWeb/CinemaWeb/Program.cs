@@ -1,6 +1,7 @@
 using CinemaWeb.Models;
 using CinemaWeb.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,18 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddDbContext<CinemaDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddIdentity<User, IdentityRole<int>>(options =>
+{
+    // Налаштування паролів (спрощені для розробки)
+    options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 4;
+})
+    .AddEntityFrameworkStores<CinemaDbContext>()
+    .AddDefaultTokenProviders();
 
 builder.Services.AddScoped<IImageService, ImageService>();
 
@@ -24,6 +37,9 @@ using (var scope = app.Services.CreateScope())
 
         // Автоматичне Update-Database
         context.Database.Migrate();
+
+        // Викликаємо сіяч для створення ролей та адміністратора
+        DbInitializer.SeedRolesAndAdminAsync(services).Wait();
     }
     catch (Exception ex)
     {
@@ -42,6 +58,8 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseRouting();
+
+app.UseAuthentication();
 
 app.UseAuthorization();
 

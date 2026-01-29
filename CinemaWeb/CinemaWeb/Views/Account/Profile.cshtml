@@ -1,0 +1,104 @@
+﻿@model CinemaWeb.ViewModels.ChangePasswordViewModel
+
+@{
+    ViewData["Title"] = "Особистий кабінет";
+}
+
+<div class="container mt-4">
+    <h2>Особистий кабінет</h2>
+    <hr />
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Мій профіль</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Повне ім'я:</small>
+                        <h5 class="fw-bold text-dark">@ViewBag.UserFullName</h5>
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Електронна пошта:</small>
+                        <p class="mb-1">@ViewBag.UserEmail</p>
+
+                        @* 👇 ЛОГІКА ПІДТВЕРДЖЕННЯ ПОШТИ *@
+                        @if (ViewBag.IsEmailConfirmed)
+                        {
+                            <span class="badge bg-success">
+                                ✓ Підтверджено
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger mb-2">
+                                ✕ Не підтверджено
+                            </span>
+
+                            <form asp-action="ConfirmEmail" method="post">
+                                <button type="submit" class="btn btn-outline-success btn-sm w-100">
+                                    Підтвердити Email
+                                </button>
+                            </form>
+                        }
+                    </div>
+
+                    <div class="mt-4">
+                        <span class="badge bg-primary">Роль: Користувач</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Зміна пароля</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="ChangePassword" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="CurrentPassword" class="form-label"></label>
+                            <input asp-for="CurrentPassword" class="form-control" />
+                            <span asp-validation-for="CurrentPassword" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="NewPassword" class="form-label"></label>
+                            <input asp-for="NewPassword" class="form-control" />
+                            <span asp-validation-for="NewPassword" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="ConfirmNewPassword" class="form-label"></label>
+                            <input asp-for="ConfirmNewPassword" class="form-control" />
+                            <span asp-validation-for="ConfirmNewPassword" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-warning">Оновити пароль</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

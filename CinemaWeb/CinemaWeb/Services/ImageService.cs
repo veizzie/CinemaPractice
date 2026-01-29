@@ -19,7 +19,7 @@ namespace CinemaWeb.Services
             _environment = environment;
         }
 
-        // Змінив тип повернення тут, щоб він відповідав Інтерфейсу 👇
+        // Зміна типу повернення для відповідності Інтерфейсу
         public async Task<ImageUploadResult> UploadImageAsync(IFormFile file)
         {
             try
