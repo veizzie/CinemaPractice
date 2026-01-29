@@ -4,7 +4,7 @@
     ViewData["Title"] = Model.Title;
 }
 
-<div class="container mt-4">
+<div class="container mt-4 mb-5">
     <div class="card shadow-lg border-0">
         <div class="card-header bg-dark text-white">
             <h3 class="mb-0">@Model.Title</h3>
@@ -14,7 +14,7 @@
                 <div class="col-md-4 text-center mb-3 mb-md-0">
                     @if (!string.IsNullOrEmpty(Model.PosterUrl))
                     {
-                        <img src="@Model.PosterUrl" alt="@Model.Title" class="img-fluid rounded shadow" style="max-height: 500px;" />
+                        <img src="@Model.PosterUrl" alt="@Model.Title" class="img-fluid rounded shadow" style="max-height: 500px; object-fit: cover;" />
                     }
                     else
                     {
@@ -36,7 +36,7 @@
                         <dd class="col-sm-9">@Html.DisplayFor(model => model.Duration) хв</dd>
 
                         <dt class="col-sm-3 text-muted">Прем'єра</dt>
-                        <dd class="col-sm-9">@Html.DisplayFor(model => model.ReleaseDate)</dd>
+                        <dd class="col-sm-9">@Model.ReleaseDate.ToString("d MMMM yyyy")</dd>
 
                         <dt class="col-sm-3 text-muted">Ціна квитка</dt>
                         <dd class="col-sm-9"><span class="badge bg-warning text-dark fs-6">@Html.DisplayFor(model => model.Price) грн</span></dd>
@@ -44,6 +44,50 @@
                         <dt class="col-sm-3 text-muted">Опис</dt>
                         <dd class="col-sm-9 text-justify">@Html.DisplayFor(model => model.Description)</dd>
                     </dl>
+
+                    <div class="mt-5">
+                        <h4 class="text-success border-bottom pb-2 mb-3">
+                            <i class="bi bi-calendar-event"></i> Розклад сеансів
+                        </h4>
+
+                        @{
+                            // Фільтруємо та сортуємо сеанси прямо тут
+                            var upcomingSessions = Model.Sessions
+                            .Where(s => s.StartTime > DateTime.Now)
+                            .OrderBy(s => s.StartTime)
+                            .ToList();
+                        }
+
+                        @if (upcomingSessions.Any())
+                        {
+                            <div class="list-group">
+                                @foreach (var session in upcomingSessions)
+                                {
+                                    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5 class="mb-1 fw-bold">
+                                                @session.StartTime.ToString("HH:mm")
+                                                <small class="text-muted fw-normal ms-2">@session.StartTime.ToString("dd MMMM")</small>
+                                            </h5>
+                                            <p class="mb-0 text-muted small">
+                                                <i class="bi bi-geo-alt-fill"></i> Зал: <strong>@session.Hall?.Name</strong>
+                                            </p>
+                                        </div>
+
+                                        <a href="#" class="btn btn-outline-success px-4">
+                                            Купити <i class="bi bi-ticket-perforated"></i>
+                                        </a>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-secondary text-center">
+                                На жаль, на цей фільм поки немає активних сеансів.
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
         </div>
@@ -51,7 +95,6 @@
             <a asp-controller="Home" asp-action="Index" class="btn btn-outline-primary btn-lg px-4">
                 <i class="bi bi-arrow-left"></i> На головну
             </a>
-            <button class="btn btn-success btn-lg px-4">Купити квиток</button>
         </div>
     </div>
 </div>

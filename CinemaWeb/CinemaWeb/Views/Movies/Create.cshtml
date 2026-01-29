@@ -2,7 +2,9 @@
 
 @{
     ViewData["Title"] = "Створити фільм";
+    // 1. Підключаємо CSS для красивого вибору жанрів
 }
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
 
 <div class="row justify-content-center">
     <div class="col-md-8">
@@ -23,9 +25,17 @@
                             </div>
 
                             <div class="form-group mb-3">
-                                <label class="control-label fw-bold mb-1">Жанри (множинний вибір)</label>
-                                <select name="genreIds" class="form-control" asp-items="ViewBag.GenreId" multiple style="height: 120px;"></select>
-                                <small class="text-muted">Затисніть Ctrl для вибору кількох.</small>
+                                <label class="control-label fw-bold mb-1">Жанри</label>
+                                <select id="genre-select" name="genreIds" multiple placeholder="Оберіть жанри..." autocomplete="off">
+                                    @if (ViewBag.Genres != null)
+                                    {
+                                        foreach (var genre in (SelectList)ViewBag.Genres)
+                                        {
+                                            <option value="@genre.Value">@genre.Text</option>
+                                        }
+                                    }
+                                </select>
+                                <small class="text-muted">Жанри можна обирати за допомогою Enter</small>
                             </div>
 
                             <div class="form-group mb-3">
@@ -88,4 +98,20 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+    <script>
+        new TomSelect("#genre-select", {
+            plugins: ['remove_button'],
+            create: false,
+            maxItems: null,
+            placeholder: "Пошук жанрів...",
+
+            onItemAdd: function() {
+                this.setTextboxValue('');
+                this.refreshOptions();
+            },
+        });
+    </script>
 }

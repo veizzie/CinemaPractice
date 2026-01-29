@@ -43,8 +43,8 @@ namespace CinemaWeb.Controllers
         // GET: Movies/Create
         public IActionResult Create()
         {
-            // Використовуємо MultiSelectList для вибору декількох жанрів
-            ViewData["GenreId"] = new MultiSelectList(_context.Genres, "Id", "Name");
+            // Передаємо список для віджета
+            ViewBag.Genres = new SelectList(_context.Genres, "Id", "Name");
             return View();
         }
 
@@ -53,22 +53,28 @@ namespace CinemaWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Movie movie, IFormFile posterImage, int[] genreIds)
         {
+            // Прибираємо валідацію полів, яких немає у формі або заповнюються автоматично
             ModelState.Remove("PosterUrl");
+            ModelState.Remove("Sessions");
+            // Видаляємо перевірку MovieGenres, бо у твоїй моделі Movie цього поля може не бути
 
             if (ModelState.IsValid)
             {
+                // 1. ЛОГІКА ЗАВАНТАЖЕННЯ КАРТИНКИ (Виправлено під твій сервіс)
                 if (posterImage != null && posterImage.Length > 0)
                 {
                     var result = await _imageService.UploadImageAsync(posterImage);
 
+                    // Перевіряємо, чи успішно завантажилось (бо твій сервіс повертає об'єкт, а не рядок)
                     if (result.Success)
                     {
                         movie.PosterUrl = $"/images/{result.FileName}";
                     }
                     else
                     {
+                        // Якщо помилка завантаження — показуємо її і повертаємо форму
                         ModelState.AddModelError("posterImage", result.ErrorMessage);
-                        ViewData["GenreId"] = new MultiSelectList(_context.Genres, "Id", "Name", genreIds);
+                        ViewBag.Genres = new SelectList(_context.Genres, "Id", "Name");
                         return View(movie);
                     }
                 }
@@ -77,14 +83,16 @@ namespace CinemaWeb.Controllers
                     movie.PosterUrl = "/images/no-poster.jpg";
                 }
 
+                // 2. ЗБЕРІГАЄМО ФІЛЬМ
                 _context.Add(movie);
                 await _context.SaveChangesAsync();
 
-                // Збереження множинних жанрів
+                // 3. ЗБЕРІГАЄМО ЖАНРИ (через прямий доступ до таблиці зв'язків)
                 if (genreIds != null)
                 {
                     foreach (var id in genreIds)
                     {
+                        // Використовуємо твою назву класу Moviegenre (з малою 'g')
                         _context.Moviegenres.Add(new Moviegenre
                         {
                             MovieId = movie.Id,
@@ -97,7 +105,7 @@ namespace CinemaWeb.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewData["GenreId"] = new MultiSelectList(_context.Genres, "Id", "Name", genreIds);
+            ViewBag.Genres = new SelectList(_context.Genres, "Id", "Name");
             return View(movie);
         }
 
@@ -109,13 +117,13 @@ namespace CinemaWeb.Controllers
             var movie = await _context.Movies.FindAsync(id);
             if (movie == null) return NotFound();
 
-            // Отримуємо список ID жанрів, які вже прив'язані до фільму
+            // Отримуємо жанри. Використовуємо Moviegenres (як у тебе в контексті)
             var selectedGenreIds = await _context.Moviegenres
                 .Where(mg => mg.MovieId == id)
                 .Select(mg => mg.GenreId)
                 .ToListAsync();
 
-            ViewData["GenreId"] = new MultiSelectList(_context.Genres, "Id", "Name", selectedGenreIds);
+            ViewBag.GenreId = new MultiSelectList(_context.Genres, "Id", "Name", selectedGenreIds);
             return View(movie);
         }
 
@@ -127,52 +135,49 @@ namespace CinemaWeb.Controllers
             if (id != movie.Id) return NotFound();
 
             ModelState.Remove("PosterUrl");
+            ModelState.Remove("Sessions");
 
             if (ModelState.IsValid)
             {
                 try
                 {
+                    // 1. Оновлення картинки
                     if (posterImage != null && posterImage.Length > 0)
                     {
                         var result = await _imageService.UploadImageAsync(posterImage);
-
                         if (result.Success)
                         {
                             movie.PosterUrl = $"/images/{result.FileName}";
                         }
-                        else
-                        {
-                            ModelState.AddModelError("posterImage", result.ErrorMessage);
-                            ViewData["GenreId"] = new MultiSelectList(_context.Genres, "Id", "Name", genreIds);
-                            return View(movie);
-                        }
                     }
                     else
                     {
+                        // Зберігаємо старий URL, якщо новий файл не вибрали
                         var oldMovie = await _context.Movies
                             .AsNoTracking()
                             .FirstOrDefaultAsync(m => m.Id == id);
-
                         movie.PosterUrl = oldMovie?.PosterUrl ?? "/images/no-poster.jpg";
                     }
 
                     _context.Update(movie);
                     await _context.SaveChangesAsync();
 
-                    // Оновлення жанрів: спочатку видаляємо старі зв'язки
-                    var oldLinks = _context.Moviegenres.Where(mg => mg.MovieId == id);
-                    _context.Moviegenres.RemoveRange(oldLinks);
-                    await _context.SaveChangesAsync();
+                    // 2. Оновлення жанрів (Видалити старі -> Додати нові)
+                    var oldGenres = _context.Moviegenres.Where(mg => mg.MovieId == id);
+                    _context.Moviegenres.RemoveRange(oldGenres);
 
-                    // Потім додаємо нові
                     if (genreIds != null)
                     {
                         foreach (var gId in genreIds)
                         {
-                            _context.Moviegenres.Add(new Moviegenre { MovieId = id, GenreId = gId });
+                            _context.Moviegenres.Add(new Moviegenre
+                            {
+                                MovieId = id,
+                                GenreId = gId
+                            });
                         }
-                        await _context.SaveChangesAsync();
                     }
+                    await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -182,7 +187,7 @@ namespace CinemaWeb.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewData["GenreId"] = new MultiSelectList(_context.Genres, "Id", "Name", genreIds);
+            ViewBag.GenreId = new MultiSelectList(_context.Genres, "Id", "Name", genreIds);
             return View(movie);
         }
 
@@ -206,6 +211,10 @@ namespace CinemaWeb.Controllers
             var movie = await _context.Movies.FindAsync(id);
             if (movie != null)
             {
+                // Видаляємо зв'язки жанрів вручну, щоб уникнути помилок БД
+                var genres = _context.Moviegenres.Where(mg => mg.MovieId == id);
+                _context.Moviegenres.RemoveRange(genres);
+
                 _context.Movies.Remove(movie);
             }
 

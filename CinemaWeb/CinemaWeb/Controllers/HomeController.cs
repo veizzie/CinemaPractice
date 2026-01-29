@@ -42,7 +42,10 @@ namespace CinemaWeb.Controllers
         {
             if (id == null) return NotFound();
 
-            var movie = await _context.Movies.FirstOrDefaultAsync(m => m.Id == id);
+            var movie = await _context.Movies
+                .Include(m => m.Sessions)           // 1. Завантажуємо сеанси
+                .ThenInclude(s => s.Hall)           // 2. Завантажуємо зали для цих сеансів
+                .FirstOrDefaultAsync(m => m.Id == id);
 
             if (movie == null) return NotFound();
 
