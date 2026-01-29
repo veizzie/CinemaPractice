@@ -16,13 +16,20 @@ namespace CinemaWeb.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var movies = await _context.Movies.ToListAsync();
-            return View(movies);
+            var now = DateTime.Now;
+
+            var activeMovies = await _context.Movies
+                .Include(m => m.Sessions)
+                .Where(m => m.Sessions.Any(s => s.StartTime > now))
+                .ToListAsync();
+
+            return View(activeMovies);
         }
 
-        public IActionResult Privacy()
+        public async Task<IActionResult> AllMovies()
         {
-            return View();
+            var allMovies = await _context.Movies.ToListAsync();
+            return View(allMovies);
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
