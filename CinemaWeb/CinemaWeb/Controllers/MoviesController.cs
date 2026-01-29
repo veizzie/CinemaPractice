@@ -43,7 +43,6 @@ namespace CinemaWeb.Controllers
         // GET: Movies/Create
         public IActionResult Create()
         {
-            // Передаємо список для віджета
             ViewBag.Genres = new SelectList(_context.Genres, "Id", "Name");
             return View();
         }
@@ -53,26 +52,21 @@ namespace CinemaWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Movie movie, IFormFile posterImage, int[] genreIds)
         {
-            // Прибираємо валідацію полів, яких немає у формі або заповнюються автоматично
             ModelState.Remove("PosterUrl");
             ModelState.Remove("Sessions");
-            // Видаляємо перевірку MovieGenres, бо у твоїй моделі Movie цього поля може не бути
 
             if (ModelState.IsValid)
             {
-                // 1. ЛОГІКА ЗАВАНТАЖЕННЯ КАРТИНКИ (Виправлено під твій сервіс)
                 if (posterImage != null && posterImage.Length > 0)
                 {
                     var result = await _imageService.UploadImageAsync(posterImage);
 
-                    // Перевіряємо, чи успішно завантажилось (бо твій сервіс повертає об'єкт, а не рядок)
                     if (result.Success)
                     {
                         movie.PosterUrl = $"/images/{result.FileName}";
                     }
                     else
                     {
-                        // Якщо помилка завантаження — показуємо її і повертаємо форму
                         ModelState.AddModelError("posterImage", result.ErrorMessage);
                         ViewBag.Genres = new SelectList(_context.Genres, "Id", "Name");
                         return View(movie);
@@ -83,16 +77,13 @@ namespace CinemaWeb.Controllers
                     movie.PosterUrl = "/images/no-poster.jpg";
                 }
 
-                // 2. ЗБЕРІГАЄМО ФІЛЬМ
                 _context.Add(movie);
                 await _context.SaveChangesAsync();
 
-                // 3. ЗБЕРІГАЄМО ЖАНРИ (через прямий доступ до таблиці зв'язків)
                 if (genreIds != null)
                 {
                     foreach (var id in genreIds)
                     {
-                        // Використовуємо твою назву класу Moviegenre (з малою 'g')
                         _context.Moviegenres.Add(new Moviegenre
                         {
                             MovieId = movie.Id,
@@ -117,7 +108,6 @@ namespace CinemaWeb.Controllers
             var movie = await _context.Movies.FindAsync(id);
             if (movie == null) return NotFound();
 
-            // Отримуємо жанри. Використовуємо Moviegenres (як у тебе в контексті)
             var selectedGenreIds = await _context.Moviegenres
                 .Where(mg => mg.MovieId == id)
                 .Select(mg => mg.GenreId)
@@ -141,7 +131,6 @@ namespace CinemaWeb.Controllers
             {
                 try
                 {
-                    // 1. Оновлення картинки
                     if (posterImage != null && posterImage.Length > 0)
                     {
                         var result = await _imageService.UploadImageAsync(posterImage);
@@ -152,7 +141,6 @@ namespace CinemaWeb.Controllers
                     }
                     else
                     {
-                        // Зберігаємо старий URL, якщо новий файл не вибрали
                         var oldMovie = await _context.Movies
                             .AsNoTracking()
                             .FirstOrDefaultAsync(m => m.Id == id);
@@ -162,7 +150,6 @@ namespace CinemaWeb.Controllers
                     _context.Update(movie);
                     await _context.SaveChangesAsync();
 
-                    // 2. Оновлення жанрів (Видалити старі -> Додати нові)
                     var oldGenres = _context.Moviegenres.Where(mg => mg.MovieId == id);
                     _context.Moviegenres.RemoveRange(oldGenres);
 
@@ -211,7 +198,6 @@ namespace CinemaWeb.Controllers
             var movie = await _context.Movies.FindAsync(id);
             if (movie != null)
             {
-                // Видаляємо зв'язки жанрів вручну, щоб уникнути помилок БД
                 var genres = _context.Moviegenres.Where(mg => mg.MovieId == id);
                 _context.Moviegenres.RemoveRange(genres);
 

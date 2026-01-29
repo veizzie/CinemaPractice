@@ -51,7 +51,6 @@
                         </h4>
 
                         @{
-                            // Фільтруємо та сортуємо сеанси прямо тут
                             var upcomingSessions = Model.Sessions
                             .Where(s => s.StartTime > DateTime.Now)
                             .OrderBy(s => s.StartTime)
