@@ -5,8 +5,8 @@
 }
 
 <div class="text-center mb-5">
-    <h1 class="display-4 fw-bold">Зараз у кіно</h1>
-    <p class="lead text-muted">Актуальні сеанси</p>
+    <h1 class="display-4 fw-bold">Архів</h1>
+    <p class="lead text-muted">Топові фільми</p>
 </div>
 
 <div class="row">
@@ -40,7 +40,7 @@
                     }
 
                     <div class="mt-auto">
-                        <a asp-controller="Home" asp-action="Details" asp-route-id="@movie.Id"
+                        <a asp-controller="Movies" asp-action="Details" asp-route-id="@movie.Id"
                            class="btn btn-primary w-100">
                             Квитки та Розклад
                         </a>
@@ -53,8 +53,8 @@
 
 <div class="text-center mt-5 mb-5">
     <hr />
-    <p class="text-muted">Не знайшли те, що шукали?</p>
-    <a asp-action="AllMovies" class="btn btn-outline-secondary btn-lg">
-        Переглянути архів усіх фільмів
+    <p class="text-muted">Хочете повернутися?</p>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-lg">
+        Переглянути актуальні сеанси
     </a>
 </div>

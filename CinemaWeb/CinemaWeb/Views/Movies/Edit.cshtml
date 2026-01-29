@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Редагування";
 }
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
 
 <div class="row justify-content-center">
     <div class="col-md-8">
@@ -25,17 +26,39 @@
 
                             <div class="form-group mb-3">
                                 <label class="control-label fw-bold mb-1">Жанри</label>
-                                <select name="genreIds" class="form-control" asp-items="ViewBag.GenreId" multiple style="height: 120px;"></select>
+                                <select id="genre-select" name="genreIds" multiple placeholder="Оберіть жанри..." autocomplete="off">
+                                    @if (ViewBag.GenreId != null)
+                                    {
+                                        foreach (var item in (MultiSelectList)ViewBag.GenreId)
+                                        {
+                                            if (item.Selected)
+                                            {
+                                                <option value="@item.Value" selected>@item.Text</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@item.Value">@item.Text</option>
+                                            }
+                                        }
+                                    }
+                                </select>
+                                <small class="text-muted">Жанри можна обирати за допомогою Enter</small>
                             </div>
 
                             <div class="card bg-light mb-3">
                                 <div class="card-body text-center">
                                     <label class="control-label fw-bold mb-2">Постер</label><br />
+
                                     @if (!string.IsNullOrEmpty(Model.PosterUrl))
                                     {
-                                        <img src="@Model.PosterUrl" style="max-height: 150px;" class="rounded mb-2 shadow-sm" />
+                                        <div class="mb-2">
+                                            <img src="@Model.PosterUrl" style="max-height: 150px; object-fit: cover;" class="rounded shadow-sm" />
+                                            <div class="small text-muted mt-1">Поточний постер</div>
+                                        </div>
                                     }
+
                                     <input type="file" name="posterImage" class="form-control mt-2" accept="image/*" />
+                                    <small class="text-muted">Залиште порожнім, якщо не хочете змінювати картинку</small>
                                 </div>
                             </div>
                         </div>
@@ -44,26 +67,31 @@
                             <div class="form-group mb-3">
                                 <label asp-for="Director" class="control-label fw-bold mb-1">Режисер</label>
                                 <input asp-for="Director" class="form-control" />
+                                <span asp-validation-for="Director" class="text-danger"></span>
                             </div>
 
                             <div class="form-group mb-3">
                                 <label asp-for="Cast" class="control-label fw-bold mb-1">Актори</label>
                                 <input asp-for="Cast" class="form-control" />
+                                <span asp-validation-for="Cast" class="text-danger"></span>
                             </div>
 
                             <div class="form-group mb-3">
                                 <label asp-for="Duration" class="control-label fw-bold mb-1">Тривалість (хв)</label>
                                 <input asp-for="Duration" class="form-control" type="number" />
+                                <span asp-validation-for="Duration" class="text-danger"></span>
                             </div>
 
                             <div class="form-group mb-3">
                                 <label asp-for="ReleaseDate" class="control-label fw-bold mb-1">Дата прем'єри</label>
                                 <input asp-for="ReleaseDate" class="form-control" type="date" />
+                                <span asp-validation-for="ReleaseDate" class="text-danger"></span>
                             </div>
 
                             <div class="form-group mb-3">
                                 <label asp-for="Price" class="control-label fw-bold mb-1">Ціна (грн)</label>
                                 <input asp-for="Price" class="form-control" />
+                                <span asp-validation-for="Price" class="text-danger"></span>
                             </div>
                         </div>
                     </div>
@@ -71,10 +99,11 @@
                     <div class="form-group mb-3">
                         <label asp-for="Description" class="control-label fw-bold mb-1">Опис</label>
                         <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
                     </div>
 
                     <div class="d-grid gap-2 d-md-block mt-4">
-                        <input type="submit" value="Зберегти" class="btn btn-primary" />
+                        <input type="submit" value="Зберегти зміни" class="btn btn-warning" />
                         <a asp-action="Index" class="btn btn-secondary">Скасувати</a>
                     </div>
                 </form>
@@ -87,4 +116,20 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+    <script>
+        new TomSelect("#genre-select", {
+            plugins: ['remove_button'],
+            create: false,
+            maxItems: null,
+            placeholder: "Пошук жанрів...",
+
+            onItemAdd: function() {
+                this.setTextboxValue('');
+                this.refreshOptions();
+            },
+        });
+    </script>
 }
