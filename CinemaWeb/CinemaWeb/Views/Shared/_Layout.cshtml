@@ -1,4 +1,9 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Identity
+@using CinemaWeb.Models
+@inject SignInManager<User> SignInManager
+@inject UserManager<User> UserManager
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -19,13 +24,46 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    @* ЛІВА ЧАСТИНА МЕНЮ *@
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark fw-bold" asp-area="" asp-controller="Admin" asp-action="Index">Адмін Панель</a>
-                        </li>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark fw-bold" asp-area="" asp-controller="Admin" asp-action="Index">Адмін Панель</a>
+                            </li>
+                        }
+                    </ul>
+
+                    @*ПРАВА ЧАСТИНА (Вхід / Реєстрація) *@
+                    <ul class="navbar-nav ms-auto">
+                        @if (SignInManager.IsSignedIn(User))
+                        {
+							var currentUser = await UserManager.GetUserAsync(User);
+							var displayName = currentUser?.FullName ?? User.Identity?.Name;
+
+                            <li class="nav-item">
+                                <a class="nav-link text-dark fw-bold" asp-controller="Account" asp-action="Profile">
+                                    Привіт, @displayName!
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <form class="form-inline" asp-controller="Account" asp-action="Logout" method="post">
+                                    <button type="submit" class="nav-link btn btn-link text-dark" style="border: none; background: none; cursor: pointer;">Вихід</button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Реєстрація</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Вхід</a>
+                            </li>
+                        }
                     </ul>
                 </div>
             </div>

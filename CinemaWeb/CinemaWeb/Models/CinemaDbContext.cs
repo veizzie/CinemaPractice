@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace CinemaWeb.Models;
 
-public partial class CinemaDbContext : DbContext
+public partial class CinemaDbContext : IdentityDbContext<User, IdentityRole<int>, int>
 {
     public CinemaDbContext()
     {
@@ -29,11 +31,13 @@ public partial class CinemaDbContext : DbContext
 
     public virtual DbSet<Ticket> Tickets { get; set; }
 
-    public virtual DbSet<User> Users { get; set; }
+    // public virtual DbSet<User> Users { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
         modelBuilder.Entity<Genre>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__genres__3213E83F5527D2A4");
@@ -180,24 +184,9 @@ public partial class CinemaDbContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__users__3213E83F8C4D4816");
-
-            entity.ToTable("users");
-
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.Email)
-                .HasMaxLength(255)
-                .HasColumnName("email");
             entity.Property(e => e.FullName)
                 .HasMaxLength(155)
                 .HasColumnName("full_name");
-            entity.Property(e => e.PasswordHash)
-                .HasMaxLength(255)
-                .HasColumnName("password_hash");
-            entity.Property(e => e.PasswordSalt)
-                .HasMaxLength(64)
-                .HasColumnName("password_salt");
-            entity.Property(e => e.Role).HasColumnName("role");
         });
 
         OnModelCreatingPartial(modelBuilder);

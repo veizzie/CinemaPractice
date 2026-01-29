@@ -6,9 +6,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using CinemaWeb.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CinemaWeb.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class HallsController : Controller
     {
         private readonly CinemaDbContext _context;
@@ -49,12 +51,16 @@ namespace CinemaWeb.Controllers
         }
 
         // POST: Halls/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,Name,Capacity")] Hall hall)
         {
+            // Перевірка, чи є вже зал з такою назвою
+            if (await _context.Halls.AnyAsync(h => h.Name == hall.Name))
+            {
+                ModelState.AddModelError("Name", "Такий зал вже існує!");
+            }
+
             if (ModelState.IsValid)
             {
                 _context.Add(hall);
@@ -81,8 +87,6 @@ namespace CinemaWeb.Controllers
         }
 
         // POST: Halls/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(byte id, [Bind("Id,Name,Capacity")] Hall hall)
@@ -90,6 +94,14 @@ namespace CinemaWeb.Controllers
             if (id != hall.Id)
             {
                 return NotFound();
+            }
+
+            // Перевіряємо, чи є ІНШИЙ зал з такою назвою (виключаючи поточний)
+            bool hallExists = await _context.Halls.AnyAsync(h => h.Name == hall.Name && h.Id != hall.Id);
+
+            if (hallExists)
+            {
+                ModelState.AddModelError("Name", "Такий зал вже існує!");
             }
 
             if (ModelState.IsValid)
