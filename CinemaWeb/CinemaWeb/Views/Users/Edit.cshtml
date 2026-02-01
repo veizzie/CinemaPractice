@@ -1,0 +1,51 @@
+﻿@model CinemaWeb.Models.User
+
+@{
+    ViewData["Title"] = "Редагування користувача";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-white">
+                <h4 class="mb-0">Редагування користувача</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit">
+                    <input type="hidden" asp-for="Id" />
+
+                    <div class="form-group mb-3">
+                        <label class="control-label fw-bold mb-1">Email</label>
+                        <input asp-for="Email" class="form-control" readonly />
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label asp-for="FullName" class="control-label fw-bold mb-1">Повне ім'я</label>
+                        <input asp-for="FullName" class="form-control" />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group mb-4">
+                        <label asp-for="Role" class="control-label fw-bold mb-1">Роль</label>
+                        <select asp-for="Role" class="form-control">
+                            <option value="User">Користувач</option>
+                            <option value="Admin">Адміністратор</option>
+                        </select>
+                        <span asp-validation-for="Role" class="text-danger"></span>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-block mt-4">
+                        <input type="submit" value="Зберегти" class="btn btn-warning" />
+                        <a asp-action="Index" class="btn btn-secondary">Назад до списку</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
