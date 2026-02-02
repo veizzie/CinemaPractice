@@ -7,53 +7,46 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using CinemaWeb.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 
 namespace CinemaWeb.Controllers
 {
-    [Authorize(Roles = "Admin")] // Тільки для адміністраторів
+    [Authorize(Roles = "Admin")]
     public class UsersController : Controller
     {
-        private readonly CinemaDbContext _context;
+        private readonly UserManager<User> _userManager;
+        private readonly RoleManager<IdentityRole<int>> _roleManager;
 
-        public UsersController(CinemaDbContext context)
+        public UsersController(UserManager<User> userManager, RoleManager<IdentityRole<int>> roleManager)
         {
-            _context = context;
+            _userManager = userManager;
+            _roleManager = roleManager;
         }
 
-        // GET: Users
         public async Task<IActionResult> Index()
         {
-            var users = await _context.Users
-                .OrderBy(u => u.Email)
-                .ToListAsync();
+            var users = await _userManager.Users.ToListAsync();
+            var model = new List<User>();
 
             foreach (var user in users)
             {
-                user.Role = user.Email != null &&
-                           user.Email.Contains("admin", StringComparison.OrdinalIgnoreCase)
-                           ? "Admin" : "User";
+                var roles = await _userManager.GetRolesAsync(user);
+                user.Role = roles.FirstOrDefault() ?? "User";
+                model.Add(user);
             }
 
-            return View(users);
+            return View(model);
         }
 
-        // GET: Users/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
-            var user = await _context.Users.FindAsync(id);
-            if (user == null)
-            {
-                return NotFound();
-            }
+            var user = await _userManager.FindByIdAsync(id.ToString());
+            if (user == null) return NotFound();
 
-            user.Role = user.Email != null &&
-                       user.Email.Contains("admin", StringComparison.OrdinalIgnoreCase)
-                       ? "Admin" : "User";
+            var userRoles = await _userManager.GetRolesAsync(user);
+            user.Role = userRoles.FirstOrDefault() ?? "User";
 
             ViewBag.Roles = new List<SelectListItem>
             {
@@ -64,57 +57,52 @@ namespace CinemaWeb.Controllers
             return View(user);
         }
 
-        // POST: Users/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Email,FullName,Role")] User user)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Email,FullName,Role")] User model)
         {
-            if (id != user.Id)
+            var user = await _userManager.FindByIdAsync(id.ToString());
+            if (user == null) return NotFound();
+
+            // --- ЗАХИСТ ГОЛОВНОГО АДМІНІСТРАТОРА ---
+            if (user.Email.Equals("admin@cinemaweb.com", StringComparison.OrdinalIgnoreCase) && model.Role != "Admin")
             {
-                return NotFound();
+                ModelState.AddModelError("Role", "Неможливо зняти права адміністратора з головного облікового запису.");
+            }
+
+            // --- ЗАХИСТ ВІД ЗНЯТТЯ АДМІНКИ З САМОГО СЕБЕ ---
+            // Отримуємо ID поточного користувача (того, хто натискає кнопку)
+            var currentUserId = _userManager.GetUserId(User);
+
+            // Якщо редагуємо свій власний акаунт і намагаємося змінити роль не на Admin
+            if (user.Id.ToString() == currentUserId && model.Role != "Admin")
+            {
+                ModelState.AddModelError("Role", "Ви не можете позбавити прав адміністратора самі себе.");
             }
 
             if (ModelState.IsValid)
             {
-                try
+                user.Email = model.Email;
+                user.UserName = model.Email;
+                user.FullName = model.FullName;
+
+                var result = await _userManager.UpdateAsync(user);
+                if (result.Succeeded)
                 {
-                    var existingUser = await _context.Users.FindAsync(id);
-                    if (existingUser == null)
+                    var currentRoles = await _userManager.GetRolesAsync(user);
+
+                    if (!currentRoles.Contains(model.Role))
                     {
-                        return NotFound();
+                        await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                        await _userManager.AddToRoleAsync(user, model.Role);
                     }
-
-                    // Оновлюємо поля
-                    existingUser.FullName = user.FullName;
-
-                    // Змінюємо email в залежності від ролі
-                    if (user.Role == "Admin" && !existingUser.Email.Contains("admin", StringComparison.OrdinalIgnoreCase))
-                    {
-                        existingUser.Email += ".admin";
-                        existingUser.UserName += ".admin";
-                    }
-                    else if (user.Role == "User" && existingUser.Email.Contains("admin", StringComparison.OrdinalIgnoreCase))
-                    {
-                        existingUser.Email = existingUser.Email.Replace(".admin", "");
-                        existingUser.UserName = existingUser.UserName.Replace(".admin", "");
-                    }
-
-                    _context.Update(existingUser);
-
-                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
+
+                foreach (var error in result.Errors)
                 {
-                    if (!UserExists(user.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    ModelState.AddModelError("", error.Description);
                 }
-                return RedirectToAction(nameof(Index));
             }
 
             ViewBag.Roles = new List<SelectListItem>
@@ -122,13 +110,7 @@ namespace CinemaWeb.Controllers
                 new SelectListItem { Value = "User", Text = "Користувач" },
                 new SelectListItem { Value = "Admin", Text = "Адміністратор" }
             };
-
-            return View(user);
-        }
-
-        private bool UserExists(int id)
-        {
-            return _context.Users.Any(e => e.Id == id);
+            return View(model);
         }
     }
 }

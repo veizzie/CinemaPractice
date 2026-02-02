@@ -32,7 +32,7 @@
                         <small class="text-muted d-block">Електронна пошта:</small>
                         <p class="mb-1">@ViewBag.UserEmail</p>
 
-                        @* 👇 ЛОГІКА ПІДТВЕРДЖЕННЯ ПОШТИ *@
+                        @* ЛОГІКА ПІДТВЕРДЖЕННЯ ПОШТИ *@
                         @if (ViewBag.IsEmailConfirmed)
                         {
                             <span class="badge bg-success">
@@ -54,7 +54,14 @@
                     </div>
 
                     <div class="mt-4">
-                        <span class="badge bg-primary">Роль: Користувач</span>
+                        @if (ViewBag.UserRole == "Admin")
+                        {
+                            <span class="badge bg-danger">Роль: Адміністратор</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-primary">Роль: Користувач</span>
+                        }
                     </div>
                 </div>
             </div>

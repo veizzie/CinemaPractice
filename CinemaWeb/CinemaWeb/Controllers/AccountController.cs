@@ -72,6 +72,9 @@ namespace CinemaWeb.Controllers
                 return RedirectToAction("Login");
             }
 
+            var roles = await _userManager.GetRolesAsync(user);
+            ViewBag.UserRole = roles.FirstOrDefault() ?? "User";
+           
             // Передача у View дані користувача
             ViewBag.UserEmail = user.Email;
             ViewBag.UserFullName = user.FullName;
@@ -80,13 +83,17 @@ namespace CinemaWeb.Controllers
             return View(new ChangePasswordViewModel());
         }
 
-        // При створенні AspNet таблиць в базі, з'явилось поле підтвердження email, тому я вирішив додати цю функціональність але просто як галочка
+
+
         [Authorize]
         [HttpPost]
         public async Task<IActionResult> ConfirmEmail()
         {
             var user = await _userManager.GetUserAsync(User);
-            if(user == null) return RedirectToAction("Login");
+
+            if (user == null) return RedirectToAction("Login");
+
+
 
             // Просто ставлю галочку що email підтверджено
             user.EmailConfirmed = true;
@@ -107,8 +114,25 @@ namespace CinemaWeb.Controllers
             {
                 // При помилці валідації - повернення на ту ж сторінку
                 var user = await _userManager.GetUserAsync(User);
-                ViewBag.UserEmail = user?.Email;
-                ViewBag.UserFullName = user?.FullName;
+
+                if (user != null)
+
+                {
+
+                    ViewBag.UserEmail = user.Email;
+
+                    ViewBag.UserFullName = user.FullName;
+
+
+
+                    // Повертаємо роль
+
+                    var roles = await _userManager.GetRolesAsync(user);
+
+                    ViewBag.UserRole = roles.FirstOrDefault() ?? "User";
+
+                }
+
                 return View("Profile", model);
             }
 
@@ -120,8 +144,11 @@ namespace CinemaWeb.Controllers
 
             // Спроба зміни пароля
             var result = await _userManager.ChangePasswordAsync(userCurrent, model.CurrentPassword, model.NewPassword);
-            
-            if(result.Succeeded)
+
+
+
+            if (result.Succeeded)
+
             {
                 // Щоб не викинуло з аккаунту після зміни пароля, оновлюється кукі
                 await _signInManager.RefreshSignInAsync(userCurrent);
@@ -130,7 +157,10 @@ namespace CinemaWeb.Controllers
                 return RedirectToAction("Profile");
             }
 
-            // При про милці
+
+
+            // При помилці
+
             foreach (var error in result.Errors)
             {
                 ModelState.AddModelError("", error.Description);
@@ -138,6 +168,10 @@ namespace CinemaWeb.Controllers
 
             ViewBag.UserEmail = userCurrent.Email;
             ViewBag.UserFullName = userCurrent.FullName;
+            
+            // Повертаємо роль
+            var currentRoles = await _userManager.GetRolesAsync(userCurrent);
+            ViewBag.UserRole = currentRoles.FirstOrDefault() ?? "User";
             return View("Profile", model);
         }
 
