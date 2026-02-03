@@ -1,0 +1,128 @@
+﻿@model CinemaWeb.Models.GroupSessionViewModel
+@{
+    ViewData["Title"] = "Групове створення сеансів";
+}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-collection-play"></i> Групове створення сеансів</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="CreateGroup">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="MovieId" class="control-label fw-bold mb-1">Фільм</label>
+                                <select asp-for="MovieId" class="form-control" asp-items="ViewBag.MovieId">
+                                    <option value="">-- Оберіть фільм --</option>
+                                </select>
+                                <span asp-validation-for="MovieId" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="HallId" class="control-label fw-bold mb-1">Зал</label>
+                                <select asp-for="HallId" class="form-control" asp-items="ViewBag.HallId">
+                                    <option value="">-- Оберіть зал --</option>
+                                </select>
+                                <span asp-validation-for="HallId" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="StartDate" class="control-label fw-bold mb-1">Дата початку</label>
+                                <input asp-for="StartDate" type="date" class="form-control" />
+                                <span asp-validation-for="StartDate" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="EndDate" class="control-label fw-bold mb-1">Дата завершення</label>
+                                <input asp-for="EndDate" type="date" class="form-control" />
+                                <span asp-validation-for="EndDate" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label asp-for="Time" class="control-label fw-bold mb-1">Час сеансу</label>
+                        <input asp-for="Time" type="time" class="form-control" />
+                        <span asp-validation-for="Time" class="text-danger"></span>
+                    </div>
+
+                    <!-- Дні тижня -->
+                    <div class="form-group mb-4">
+                        <label class="control-label fw-bold mb-2">Дні тижня:</label>
+                        <div class="border p-3 rounded bg-light">
+                            <div class="row">
+                                <div class="col-md-3 col-6 mb-2">
+                                    <div class="form-check">
+                                        <input asp-for="Monday" class="form-check-input" />
+                                        <label asp-for="Monday" class="form-check-label">Понеділок</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6 mb-2">
+                                    <div class="form-check">
+                                        <input asp-for="Tuesday" class="form-check-input" />
+                                        <label asp-for="Tuesday" class="form-check-label">Вівторок</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6 mb-2">
+                                    <div class="form-check">
+                                        <input asp-for="Wednesday" class="form-check-input" />
+                                        <label asp-for="Wednesday" class="form-check-label">Середа</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6 mb-2">
+                                    <div class="form-check">
+                                        <input asp-for="Thursday" class="form-check-input" />
+                                        <label asp-for="Thursday" class="form-check-label">Четвер</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6 mb-2">
+                                    <div class="form-check">
+                                        <input asp-for="Friday" class="form-check-input" />
+                                        <label asp-for="Friday" class="form-check-label">П'ятниця</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6 mb-2">
+                                    <div class="form-check">
+                                        <input asp-for="Saturday" class="form-check-input" />
+                                        <label asp-for="Saturday" class="form-check-label">Субота</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6 mb-2">
+                                    <div class="form-check">
+                                        <input asp-for="Sunday" class="form-check-input" />
+                                        <label asp-for="Sunday" class="form-check-label">Неділя</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-block mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Створити сеанси
+                        </button>
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Назад до розкладу
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
