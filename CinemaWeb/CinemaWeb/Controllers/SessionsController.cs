@@ -36,13 +36,22 @@ namespace CinemaWeb.Controllers
             }
 
             var session = await _context.Sessions
-                .Include(s => s.Hall)
                 .Include(s => s.Movie)
+                .Include(s => s.Hall)
+                .ThenInclude(h => h.Seats)
                 .FirstOrDefaultAsync(m => m.Id == id);
+
             if (session == null)
             {
                 return NotFound();
             }
+
+            var takenSeatIds = await _context.Tickets
+                .Where(t => t.SessionId == session.Id)
+                .Select(t => t.SeatId)
+                .ToListAsync();
+
+            ViewBag.TakenSeats = takenSeatIds;
 
             return View(session);
         }

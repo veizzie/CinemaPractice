@@ -14,10 +14,16 @@ public partial class Hall
     [StringLength(50, ErrorMessage = "Назва занадто довга")]
     public string Name { get; set; } = null!;
 
-    [Required(ErrorMessage = "Вкажіть місткість залу")]
-    [Display(Name = "Кількість місць")] // Відображення тексту "Кількість місць" у формі, замість "Name"
+    [Display(Name = "Кількість місць")]
     [Range(10, 150, ErrorMessage = "Місткість має бути від 10 до 150 місць")]
     public short Capacity { get; set; }
+
+    // Використав byte, бо в Seat.Row в нас теж byte
+    [Display(Name = "Кількість рядів")]
+    public byte RowsCount { get; set; }
+
+    [Display(Name = "Місць у ряду")]
+    public byte ColsCount { get; set; }
 
     public virtual ICollection<Seat> Seats { get; set; } = new List<Seat>();
 
