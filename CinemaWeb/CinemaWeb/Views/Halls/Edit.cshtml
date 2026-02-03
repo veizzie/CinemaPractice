@@ -1,35 +1,60 @@
 ﻿@model CinemaWeb.Models.Hall
 
 @{
-    ViewData["Title"] = "Редагування";
+    ViewData["Title"] = "Редагування залу";
 }
 
 <div class="row justify-content-center">
-    <div class="col-md-6">
+    <div class="col-md-8">
         <div class="card shadow-sm">
-            <div class="card-header bg-warning text-dark">
-                <h4 class="mb-0">Редагувати зал</h4>
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Редагування залу</h4>
             </div>
             <div class="card-body">
-                <form asp-action="Edit">
+                <form asp-action="Edit" id="hallForm">
                     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                     <input type="hidden" asp-for="Id" />
 
-                    <div class="form-group mb-3">
+                    <div class="form-group mb-4">
                         <label asp-for="Name" class="control-label fw-bold mb-1">Назва залу</label>
                         <input asp-for="Name" class="form-control" />
                         <span asp-validation-for="Name" class="text-danger"></span>
                     </div>
 
-                    <div class="form-group mb-3">
-                        <label asp-for="Capacity" class="control-label fw-bold mb-1">Місткість</label>
-                        <input asp-for="Capacity" class="form-control" type="number" />
-                        <span asp-validation-for="Capacity" class="text-danger"></span>
+                    <div class="row g-3 mb-3 align-items-end">
+                        <div class="col-md-4">
+                            <label asp-for="RowsCount" class="control-label fw-bold">Кількість рядів</label>
+                            <input asp-for="RowsCount" id="rowsInput" class="form-control" type="number" min="1" max="20" />
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="ColsCount" class="control-label fw-bold">Місць у ряду</label>
+                            <input asp-for="ColsCount" id="colsInput" class="form-control" type="number" min="1" max="30" />
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-outline-primary w-100" onclick="redrawGrid()">
+                                <i class="bi bi-arrow-clockwise"></i> Перебудувати сітку
+                            </button>
+                        </div>
                     </div>
 
+                    <div class="alert alert-warning py-2 text-center small">
+                        <i class="bi bi-exclamation-triangle"></i> Увага: Зменшення розмірів сітки видалить крайні місця!
+                    </div>
+
+                    <hr />
+
+                    <div class="mb-3 text-center">
+                        <h5 class="text-muted small">Клікніть, щоб додати або видалити місце</h5>
+                        <div class="d-inline-block bg-light p-4 rounded border mt-2" style="overflow-x: auto; max-width: 100%;">
+                            <div id="seatMap" class="d-flex flex-column align-items-center gap-1"></div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="SelectedSeats" id="selectedSeatsInput" />
+
                     <div class="d-grid gap-2 d-md-block mt-4">
-                        <input type="submit" value="Зберегти" class="btn btn-primary" />
-                        <a asp-action="Index" class="btn btn-secondary">Скасувати</a>
+                        <button type="submit" class="btn btn-primary btn-lg">Зберегти зміни</button>
+                        <a asp-action="Index" class="btn btn-secondary btn-lg">Скасувати</a>
                     </div>
                 </form>
             </div>
@@ -41,4 +66,114 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
+    <script>
+        // 1. Отримуємо список існуючих місць з сервера (наприклад: "1-1,1-2,2-5")
+        // ViewBag прийде як рядок, розбиваємо його на масив
+        var existingSeatsStr = "@ViewBag.ExistingSeats";
+        var activeSeatsSet = new Set(existingSeatsStr.split(','));
+
+        function generateGrid(keepExistingData) {
+            const rows = document.getElementById('rowsInput').value;
+            const cols = document.getElementById('colsInput').value;
+            const mapDiv = document.getElementById('seatMap');
+
+            // Якщо ми не просто оновлюємо вигляд, а перебудовуємо розміри - очищаємо
+            mapDiv.innerHTML = '';
+
+            for (let r = 1; r <= rows; r++) {
+                let rowDiv = document.createElement('div');
+                rowDiv.className = 'seat-row d-flex gap-1';
+
+                for (let c = 1; c <= cols; c++) {
+                    let seatDiv = document.createElement('div');
+                    seatDiv.className = 'seat-box';
+                    seatDiv.title = `Ряд ${r}, Місце ${c}`;
+                    seatDiv.innerText = c;
+
+                    let coord = r + '-' + c;
+                    seatDiv.dataset.coords = coord;
+
+                    // ЛОГІКА ВІДОБРАЖЕННЯ:
+                    // Якщо координата є в списку активних місць -> звичайний вигляд
+                    // Якщо немає -> додаємо клас 'deleted'
+                    if (activeSeatsSet.has(coord)) {
+                        // Місце активне (нічого не робимо)
+                    } else {
+                        // Місця немає в базі - воно "видалене" (прохід)
+                        seatDiv.classList.add('deleted');
+                    }
+
+                    // Клік перемикає стан
+                    seatDiv.onclick = function() {
+                        this.classList.toggle('deleted');
+
+                        // Оновлюємо наш Set в пам'яті, щоб при ресайзі не губилось
+                        if (this.classList.contains('deleted')) {
+                            activeSeatsSet.delete(coord);
+                        } else {
+                            activeSeatsSet.add(coord);
+                        }
+                    };
+
+                    rowDiv.appendChild(seatDiv);
+                }
+                mapDiv.appendChild(rowDiv);
+            }
+        }
+
+        // Функція для кнопки "Перебудувати сітку"
+        function redrawGrid() {
+            if(confirm("Зміна розмірів може призвести до втрати крайніх місць. Продовжити?")) {
+                generateGrid();
+            }
+        }
+
+        document.getElementById('hallForm').onsubmit = function() {
+            let validSeats = [];
+            // Збираємо тільки живі місця
+            document.querySelectorAll('.seat-box:not(.deleted)').forEach(seat => {
+                validSeats.push(seat.dataset.coords);
+            });
+            document.getElementById('selectedSeatsInput').value = validSeats.join(',');
+            return true;
+        };
+
+        // Запуск при старті
+        window.onload = function() {
+            generateGrid();
+        };
+    </script>
+
+    <style>
+        .seat-box {
+            width: 30px;
+            height: 30px;
+            background-color: #0d6efd; /* Синій для редагування */
+            color: white;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+            .seat-box:hover {
+                transform: scale(1.1);
+            }
+
+            .seat-box.deleted {
+                background-color: transparent;
+                border: 1px dashed #ccc;
+                color: transparent;
+            }
+
+                .seat-box.deleted:hover {
+                    background-color: #e9ecef;
+                    transform: none;
+                }
+    </style>
 }

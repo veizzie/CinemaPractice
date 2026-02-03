@@ -1,0 +1,232 @@
+﻿@model CinemaWeb.Models.Session
+
+@{
+    ViewData["Title"] = "Купівля квитків";
+    var takenSeats = ViewBag.TakenSeats as List<int> ?? new List<int>();
+    var mySeats = ViewBag.MySeats as List<int> ?? new List<int>();
+}
+
+<div class="container mt-4">
+    <div class="text-center mb-4">
+        <h3>@Model.Movie.Title</h3>
+        <p class="text-muted">
+            @Model.Hall.Name | @Model.StartTime.ToString("dd.MM.yyyy HH:mm") |
+            Ціна: <span id="pricePerTicket">@Model.Movie.Price</span> грн
+        </p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-12">
+
+            <div class="screen-container mb-5">
+                <div class="screen">ЕКРАН</div>
+            </div>
+
+            <div class="d-flex flex-column align-items-center gap-2">
+                @for (byte r = 1; r <= Model.Hall.RowsCount; r++)
+                {
+                    <div class="d-flex align-items-center">
+
+                        <div class="row-label me-3">Ряд @r</div>
+
+                        <div class="d-flex gap-2">
+                            @for (byte c = 1; c <= Model.Hall.ColsCount; c++)
+                            {
+                                var seat = Model.Hall.Seats.FirstOrDefault(s => s.Row == r && s.Number == c);
+
+                                if (seat == null)
+                                {
+                                    <div class="seat-gap"></div>
+                                }
+                                else
+                                {
+                                    bool isTaken = takenSeats.Contains(seat.Id);
+                                    bool isMine = mySeats.Contains(seat.Id); // 👇 Перевірка: чи це моє місце
+
+                                    if (isMine)
+                                    {
+                                        // ВАШЕ МІСЦЕ (синє)
+                                        <div class="seat mine" title="Ряд @r, Місце @c (Ваше місце)">@c</div>
+                                    }
+                                    else if (isTaken)
+                                    {
+                                        // ЗАЙНЯТЕ КИМОСЬ (сіре)
+                                        <div class="seat taken" title="Ряд @r, Місце @c (Зайнято)">@c</div>
+                                    }
+                                    else
+                                    {
+                                        // ВІЛЬНЕ (зелене, клікабельне)
+                                        <div class="seat available"
+                                             onclick="toggleSeat(this, @seat.Id)"
+                                             title="Ряд @r, Місце @c">
+                                            @c
+                                        </div>
+                                    }
+                                }
+                            }
+                        </div>
+
+                        <div class="row-label ms-3">@r</div>
+                    </div>
+                }
+            </div>
+
+            <div class="d-flex justify-content-center flex-wrap gap-4 mt-4 text-small">
+                <div class="d-flex align-items-center gap-1"><div class="seat available sm"></div> Вільно</div>
+                <div class="d-flex align-items-center gap-1"><div class="seat selected sm"></div> Обрано зараз</div>
+                <div class="d-flex align-items-center gap-1"><div class="seat taken sm"></div> Зайнято</div>
+                <div class="d-flex align-items-center gap-1"><div class="seat mine sm"></div> Ваші квитки</div>
+            </div>
+
+            <div class="card mt-4 shadow-sm border-warning">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0">Обрано квитків: <span id="countDisplay" class="fw-bold">0</span></h5>
+                        <small class="text-muted">До сплати: <span id="totalDisplay" class="fw-bold text-success">0.00</span> грн</small>
+                    </div>
+
+                    <form asp-action="Create" method="post" id="buyForm">
+                        <input type="hidden" name="sessionId" value="@Model.Id" />
+                        <input type="hidden" name="selectedSeatIds" id="selectedSeatIds" />
+
+                        <button type="submit" class="btn btn-warning btn-lg" id="buyBtn" disabled>
+                            Купити квитки
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger mt-3">@TempData["Error"]</div>
+            }
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const price = @Model.Movie.Price.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        let selectedIds = [];
+
+        function toggleSeat(element, seatId) {
+            if (element.classList.contains('selected')) {
+                element.classList.remove('selected');
+                selectedIds = selectedIds.filter(id => id !== seatId);
+            } else {
+                element.classList.add('selected');
+                selectedIds.push(seatId);
+            }
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const count = selectedIds.length;
+            const total = count * price;
+
+            document.getElementById('countDisplay').innerText = count;
+            document.getElementById('totalDisplay').innerText = total.toFixed(2);
+            document.getElementById('selectedSeatIds').value = selectedIds.join(',');
+
+            const btn = document.getElementById('buyBtn');
+            btn.disabled = count === 0;
+        }
+    </script>
+
+    <style>
+        .row-label {
+            font-weight: bold;
+            color: #888;
+            font-size: 14px;
+            min-width: 45px;
+            text-align: right;
+            user-select: none;
+        }
+
+        .seat {
+            width: 35px;
+            height: 35px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            user-select: none;
+            transition: 0.2s;
+        }
+
+            .seat.sm {
+                width: 20px;
+                height: 20px;
+                font-size: 0;
+            }
+
+        .seat-gap {
+            width: 35px;
+            height: 35px;
+        }
+
+        /* ВІЛЬНЕ */
+        .seat.available {
+            background-color: white;
+            border: 2px solid #28a745;
+            color: #28a745;
+            cursor: pointer;
+        }
+
+            .seat.available:hover {
+                background-color: #28a745;
+                color: white;
+                transform: scale(1.1);
+            }
+
+        /* ОБРАНЕ (Жовте) */
+        .seat.selected {
+            background-color: #ffc107;
+            border: 2px solid #ffc107;
+            color: black;
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
+        }
+
+        /* ЗАЙНЯТЕ (Сіре) */
+        .seat.taken {
+            background-color: #e9ecef;
+            border: 2px solid #dee2e6;
+            color: #adb5bd;
+            cursor: not-allowed;
+        }
+
+        /* 👇 ВАШЕ (Синє) */
+        .seat.mine {
+            background-color: #cfe2ff; /* Світло-синій фон */
+            border: 2px solid #0d6efd; /* Синя рамка */
+            color: #0d6efd; /* Синій текст */
+            cursor: default;
+        }
+
+        .screen-container {
+            perspective: 400px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .screen {
+            width: 80%;
+            height: 40px;
+            background: linear-gradient(to bottom, #e0e0e0, #f8f9fa);
+            transform: rotateX(-15deg);
+            box-shadow: 0 20px 20px -10px rgba(0,0,0,0.1);
+            text-align: center;
+            line-height: 40px;
+            color: #aaa;
+            letter-spacing: 5px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+}

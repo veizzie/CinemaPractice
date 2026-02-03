@@ -5,30 +5,55 @@
 }
 
 <div class="row justify-content-center">
-    <div class="col-md-6">
+    <div class="col-md-8">
         <div class="card shadow-sm">
             <div class="card-header bg-success text-white">
-                <h4 class="mb-0">Створити новий зал</h4>
+                <h4 class="mb-0">Конструктор залу</h4>
             </div>
             <div class="card-body">
-                <form asp-action="Create">
+                <form asp-action="Create" id="hallForm">
                     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-                    <div class="form-group mb-3">
+                    <div class="form-group mb-4">
                         <label asp-for="Name" class="control-label fw-bold mb-1">Назва залу</label>
                         <input asp-for="Name" class="form-control" placeholder="Наприклад: Червоний зал" />
                         <span asp-validation-for="Name" class="text-danger"></span>
                     </div>
 
-                    <div class="form-group mb-3">
-                        <label asp-for="Capacity" class="control-label fw-bold mb-1">Місткість (кількість місць)</label>
-                        <input asp-for="Capacity" class="form-control" type="number" min="1" />
-                        <span asp-validation-for="Capacity" class="text-danger"></span>
+                    <div class="row g-3 mb-3 align-items-end">
+                        <div class="col-md-4">
+                            <label asp-for="RowsCount" class="control-label fw-bold">Кількість рядів</label>
+                            <input asp-for="RowsCount" id="rowsInput" class="form-control" type="number" min="1" max="20" value="10" />
+                            <span asp-validation-for="RowsCount" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="ColsCount" class="control-label fw-bold">Місць у ряду</label>
+                            <input asp-for="ColsCount" id="colsInput" class="form-control" type="number" min="1" max="30" value="12" />
+                            <span asp-validation-for="ColsCount" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-outline-primary w-100" onclick="generateGrid()">
+                                <i class="bi bi-grid-3x3"></i> Згенерувати сітку
+                            </button>
+                        </div>
                     </div>
 
+                    <hr />
+
+                    <div class="mb-3 text-center">
+                        <h5 class="text-muted small">Натисніть на місце, щоб видалити його (зробити прохід)</h5>
+                        <div class="d-inline-block bg-light p-4 rounded border mt-2" style="overflow-x: auto; max-width: 100%;">
+                            <div id="seatMap" class="d-flex flex-column align-items-center gap-1"></div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="SelectedSeats" id="selectedSeatsInput" />
+
                     <div class="d-grid gap-2 d-md-block mt-4">
-                        <input type="submit" value="Створити" class="btn btn-success" />
-                        <a asp-action="Index" class="btn btn-secondary">Назад до списку</a>
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-save"></i> Зберегти зал
+                        </button>
+                        <a asp-action="Index" class="btn btn-secondary btn-lg">Назад до списку</a>
                     </div>
                 </form>
             </div>
@@ -40,4 +65,89 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
+    <script>
+        // Функція малювання сітки
+        function generateGrid() {
+            const rows = document.getElementById('rowsInput').value;
+            const cols = document.getElementById('colsInput').value;
+            const mapDiv = document.getElementById('seatMap');
+
+            mapDiv.innerHTML = ''; // Очищення старої сітки
+
+            for (let r = 1; r <= rows; r++) {
+                let rowDiv = document.createElement('div');
+                rowDiv.className = 'seat-row d-flex gap-1';
+
+                for (let c = 1; c <= cols; c++) {
+                    let seatDiv = document.createElement('div');
+                    seatDiv.className = 'seat-box';
+                    seatDiv.title = `Ряд ${r}, Місце ${c}`;
+                    seatDiv.innerText = c; // Номер місця всередині квадратика
+
+                    // Збереження координат в атрибуті
+                    seatDiv.dataset.coords = r + '-' + c;
+
+                    // Обробка кліку (видалення/відновлення)
+                    seatDiv.onclick = function() {
+                        this.classList.toggle('deleted');
+                    };
+
+                    rowDiv.appendChild(seatDiv);
+                }
+                mapDiv.appendChild(rowDiv);
+            }
+        }
+
+        // Обробка відправки форми
+        document.getElementById('hallForm').onsubmit = function() {
+            let validSeats = [];
+            // Збір тільки тих місць, які НЕ мають класу deleted
+            document.querySelectorAll('.seat-box:not(.deleted)').forEach(seat => {
+                validSeats.push(seat.dataset.coords);
+            });
+
+            // Запис їх у прихований input
+            document.getElementById('selectedSeatsInput').value = validSeats.join(',');
+
+            return true;
+        };
+
+        // Генерація початкової сітки при завантаженні сторінки
+        window.onload = generateGrid;
+    </script>
+
+    <style>
+        .seat-box {
+            width: 30px;
+            height: 30px;
+            background-color: #198754;
+            color: white;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .seat-box:hover {
+            transform: scale(1.1);
+            background-color: #157347;
+        }
+
+        /* Стиль для "видаленого" місця (проходу) */
+        .seat-box.deleted {
+            background-color: transparent;
+            border: 1px dashed #ccc;
+            color: transparent;
+        }
+
+        .seat-box.deleted:hover {
+            background-color: #f8d7da;
+            transform: none;
+        }
+    </style>
 }
