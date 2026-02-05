@@ -175,6 +175,7 @@
                                         <th>Дата та час</th>
                                         <th>Зал</th>
                                         <th>Місце</th>
+                                        <th>Ціна</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -185,6 +186,7 @@
                                             <td>@item.Session.StartTime.ToString("dd.MM.yyyy HH:mm")</td>
                                             <td>@item.Session.Hall.Name</td>
                                             <td>Ряд @item.Seat.Row, Місце @item.Seat.Number</td>
+                                            <td>@item.Session.Movie.Price грн</td>
                                         </tr>
                                     }
                                 </tbody>
