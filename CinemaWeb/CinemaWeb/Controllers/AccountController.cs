@@ -3,6 +3,7 @@ using CinemaWeb.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace CinemaWeb.Controllers
 {
@@ -10,11 +11,13 @@ namespace CinemaWeb.Controllers
     {
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
+        private readonly CinemaDbContext _context;
 
-        public AccountController(UserManager<User> userManager, SignInManager<User> signInManager)
+        public AccountController(UserManager<User> userManager, SignInManager<User> signInManager, CinemaDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _context = context;
         }
 
         [HttpGet]
@@ -26,14 +29,11 @@ namespace CinemaWeb.Controllers
             if (ModelState.IsValid)
             {
                 var user = new User { UserName = model.Email, Email = model.Email, FullName = model.FullName };
-                // Додаємо користувача (пароль хешується сам)
                 var result = await _userManager.CreateAsync(user, model.Password);
 
                 if (result.Succeeded)
                 {
                     await _userManager.AddToRoleAsync(user, "User");
-
-                    // Одразу вхід в систему після реєстрації
                     await _signInManager.SignInAsync(user, isPersistent: false);
                     return RedirectToAction("Index", "Home");
                 }
@@ -69,20 +69,42 @@ namespace CinemaWeb.Controllers
         public async Task<IActionResult> Profile()
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
+            if (user == null) return RedirectToAction("Login");
+
+            var model = await LoadProfileDataAsync(user);
+
+            return View(model);
+        }
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> ChangePassword(UserProfileViewModel model)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login");
+
+            if (!ModelState.IsValid)
             {
-                return RedirectToAction("Login");
+                var refreshedModel = await LoadProfileDataAsync(user);
+                return View("Profile", refreshedModel);
             }
 
-            var roles = await _userManager.GetRolesAsync(user);
-            ViewBag.UserRole = roles.FirstOrDefault() ?? "User";
+            var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
 
-            // Передача у View дані користувача
-            ViewBag.UserEmail = user.Email;
-            ViewBag.UserFullName = user.FullName;
-            ViewBag.IsEmailConfirmed = user.EmailConfirmed;
+            if (result.Succeeded)
+            {
+                await _signInManager.RefreshSignInAsync(user);
+                TempData["SuccessMessage"] = "Пароль успішно змінено.";
+                return RedirectToAction("Profile");
+            }
 
-            return View(new ChangePasswordViewModel());
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError("", error.Description);
+            }
+
+            var modelWithErrors = await LoadProfileDataAsync(user);
+            return View("Profile", modelWithErrors);
         }
 
         [Authorize]
@@ -92,72 +114,15 @@ namespace CinemaWeb.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return RedirectToAction("Login");
 
-            // Просто ставлю галочку що email підтверджено
             user.EmailConfirmed = true;
             await _userManager.UpdateAsync(user);
-
-            // Оновлюю сесію, щоб одразу застосувати зміни
             await _signInManager.RefreshSignInAsync(user);
 
             TempData["SuccessMessage"] = "Email успішно підтверджено.";
             return RedirectToAction("Profile");
         }
 
-        [Authorize]
         [HttpPost]
-        public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
-        {
-            if (!ModelState.IsValid)
-            {
-                // При помилці валідації - повернення на ту ж сторінку
-                var user = await _userManager.GetUserAsync(User);
-                if (user != null)
-                {
-                    ViewBag.UserEmail = user.Email;
-                    ViewBag.UserFullName = user.FullName;
-
-                    // Повертаємо роль
-                    var roles = await _userManager.GetRolesAsync(user);
-                    ViewBag.UserRole = roles.FirstOrDefault() ?? "User";
-                }
-                return View("Profile", model);
-            }
-
-            var userCurrent = await _userManager.GetUserAsync(User);
-            if (userCurrent == null)
-            {
-                return RedirectToAction("Login");
-            }
-
-            // Спроба зміни пароля
-            var result = await _userManager.ChangePasswordAsync(userCurrent, model.CurrentPassword, model.NewPassword);
-
-            if (result.Succeeded)
-            {
-                // Щоб не викинуло з аккаунту після зміни пароля, оновлюється кукі
-                await _signInManager.RefreshSignInAsync(userCurrent);
-
-                TempData["SuccessMessage"] = "Пароль успішно змінено.";
-                return RedirectToAction("Profile");
-            }
-
-            // При помилці
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError("", error.Description);
-            }
-
-            ViewBag.UserEmail = userCurrent.Email;
-            ViewBag.UserFullName = userCurrent.FullName;
-
-            // Повертаємо роль
-            var currentRoles = await _userManager.GetRolesAsync(userCurrent);
-            ViewBag.UserRole = currentRoles.FirstOrDefault() ?? "User";
-
-            return View("Profile", model);
-        }
-
-        [HttpPost] // Для виходу тільки пост-запит
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();
@@ -168,6 +133,30 @@ namespace CinemaWeb.Controllers
         public IActionResult AccessDenied()
         {
             return RedirectToAction("Index", "Home");
+        }
+
+        private async Task<UserProfileViewModel> LoadProfileDataAsync(User user)
+        {
+            var allTickets = await _context.Tickets
+                .Include(t => t.Seat)
+                .Include(t => t.Session).ThenInclude(s => s.Movie)
+                .Include(t => t.Session).ThenInclude(s => s.Hall)
+                .Where(t => t.UserId == user.Id)
+                .OrderByDescending(t => t.Session.StartTime)
+                .ToListAsync();
+
+            var model = new UserProfileViewModel
+            {
+                FullName = user.FullName,
+                Email = user.Email,
+                IsEmailConfirmed = user.EmailConfirmed,
+                Role = (await _userManager.GetRolesAsync(user)).FirstOrDefault() ?? "User",
+
+                ActiveTickets = allTickets.Where(t => t.Session.StartTime > DateTime.Now).ToList(),
+                HistoryTickets = allTickets.Where(t => t.Session.StartTime <= DateTime.Now).ToList()
+            };
+
+            return model;
         }
     }
 }
