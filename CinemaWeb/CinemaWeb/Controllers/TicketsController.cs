@@ -21,18 +21,16 @@ namespace CinemaWeb.Controllers
             _context = context;
         }
 
-        // GET: Tickets (Показує квитки поточного користувача)
+        // GET: Tickets (Для адміна - всі, для юзера - свої)
         public async Task<IActionResult> Index()
         {
-            // Отримуємо ID поточного користувача
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             int userId = int.Parse(userIdStr);
 
-            // Якщо це Адмін - показуємо всі квитки, якщо Юзер - тільки свої
             var query = _context.Tickets
                 .Include(t => t.Seat)
-                .Include(t => t.Session)
-                .ThenInclude(s => s.Movie) // Підтягуємо назву фільму
+                .Include(t => t.Session).ThenInclude(s => s.Movie)
+                .Include(t => t.Session).ThenInclude(s => s.Hall)
                 .Include(t => t.User)
                 .AsQueryable();
 
@@ -45,7 +43,6 @@ namespace CinemaWeb.Controllers
         }
 
         // GET: Tickets/Create?sessionId
-        // Сторінка з візуальною картою залу
         [HttpGet]
         public async Task<IActionResult> Create(int? sessionId)
         {
@@ -54,15 +51,14 @@ namespace CinemaWeb.Controllers
             var session = await _context.Sessions
                 .Include(s => s.Movie)
                 .Include(s => s.Hall)
-                .ThenInclude(h => h.Seats) // вантажимо місця для малювання карти
+                .ThenInclude(h => h.Seats)
                 .FirstOrDefaultAsync(s => s.Id == sessionId);
 
             if (session == null) return NotFound();
 
-            // Визначення ID місць, які вже зайняті на цей сеанс
             var sessionTickets = await _context.Tickets
                 .Where(t => t.SessionId == sessionId)
-                .Select(t => new {t.SeatId, t.UserId})
+                .Select(t => new { t.SeatId, t.UserId })
                 .ToListAsync();
 
             var takenSeatIds = sessionTickets.Select(t => t.SeatId).ToList();
@@ -77,15 +73,14 @@ namespace CinemaWeb.Controllers
                     .ToList();
             }
 
-            ViewBag.TakenSeats = takenSeatIds; // Список зайнятих передаємо у View
-            ViewBag.TicketPrice = session.Movie.Price; // Передаємо ціну квитка
-            ViewBag.MySeats = mySeatIds; // Список місць поточного користувача
+            ViewBag.TakenSeats = takenSeatIds;
+            ViewBag.TicketPrice = session.Movie.Price;
+            ViewBag.MySeats = mySeatIds;
 
             return View(session);
         }
 
         // POST: Tickets/Create
-        // Обробка покупки (приймає список ID місць через кому)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(int sessionId, string selectedSeatIds)
@@ -95,12 +90,10 @@ namespace CinemaWeb.Controllers
                 return RedirectToAction("Create", new { sessionId = sessionId });
             }
 
-            // Отримуємо ID поточного користувача
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdStr)) return RedirectToAction("Login", "Account");
             int userId = int.Parse(userIdStr);
 
-            // Парсинг ID місць ("5,8,12" -> [5, 8, 12])
             List<int> seatIds;
             try
             {
@@ -111,7 +104,6 @@ namespace CinemaWeb.Controllers
                 return BadRequest("Некоректні дані місць.");
             }
 
-            // ПЕРЕВІРКА: чи не купив хтось ці місця за секунду до нас
             var alreadyTaken = await _context.Tickets
                 .AnyAsync(t => t.SessionId == sessionId && seatIds.Contains(t.SeatId));
 
@@ -121,7 +113,6 @@ namespace CinemaWeb.Controllers
                 return RedirectToAction("Create", new { sessionId = sessionId });
             }
 
-            // Створюємо квитки
             var newTickets = new List<Ticket>();
             foreach (var seatId in seatIds)
             {
@@ -131,19 +122,17 @@ namespace CinemaWeb.Controllers
                     UserId = userId,
                     SeatId = seatId,
                     PurchaseDate = DateTime.Now,
-                    Status = 1 // 1 = Активний/Оплачений
+                    Status = 1
                 });
             }
 
             _context.Tickets.AddRange(newTickets);
             await _context.SaveChangesAsync();
 
-            // Перенаправляємо в профіль
             return RedirectToAction("Profile", "Account");
         }
 
         // GET: Tickets/Delete/5
-        // Дозволяємо видаляти (скасовувати) квиток
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
@@ -151,18 +140,19 @@ namespace CinemaWeb.Controllers
             var ticket = await _context.Tickets
                 .Include(t => t.Seat)
                 .Include(t => t.Session)
-                .ThenInclude(s => s.Movie)
+                    .ThenInclude(s => s.Movie)
+                .Include(t => t.Session)
+                    .ThenInclude(s => s.Hall)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
             if (ticket == null) return NotFound();
 
-            // Перевірка: чи це квиток поточного користувача (або адміна)
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             int userId = int.Parse(userIdStr);
 
             if (!User.IsInRole("Admin") && ticket.UserId != userId)
             {
-                return Forbid(); // Заборонено видаляти чужі квитки
+                return Forbid();
             }
 
             return View(ticket);
@@ -179,7 +169,7 @@ namespace CinemaWeb.Controllers
                 _context.Tickets.Remove(ticket);
                 await _context.SaveChangesAsync();
             }
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction("Profile", "Account");
         }
 
         public async Task<IActionResult> Details(int? id)
@@ -188,14 +178,12 @@ namespace CinemaWeb.Controllers
 
             var ticket = await _context.Tickets
                 .Include(t => t.Seat)
-                .Include(t => t.Session)
-                .ThenInclude(s => s.Movie)
+                .Include(t => t.Session).ThenInclude(s => s.Movie)
                 .Include(t => t.User)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
             if (ticket == null) return NotFound();
 
-            // Захист від перегляду чужих квитків
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             int userId = int.Parse(userIdStr);
             if (!User.IsInRole("Admin") && ticket.UserId != userId)
