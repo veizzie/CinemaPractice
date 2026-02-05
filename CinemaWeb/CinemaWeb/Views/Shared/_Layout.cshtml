@@ -4,7 +4,7 @@
 @inject UserManager<User> UserManager
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -16,7 +16,7 @@
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-dark border-bottom border-secondary box-shadow mb-3">
             <div class="container-fluid">
                 <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">CinemaWeb</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
@@ -27,12 +27,12 @@
                     @* ЛІВА ЧАСТИНА МЕНЮ *@
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
                         @if (User.IsInRole("Admin"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark fw-bold" asp-area="" asp-controller="Admin" asp-action="Index">Адмін Панель</a>
+                                <a class="nav-link fw-bold" asp-area="" asp-controller="Admin" asp-action="Index">Адмін Панель</a>
                             </li>
                         }
                     </ul>
@@ -45,23 +45,23 @@
 							var displayName = currentUser?.FullName ?? User.Identity?.Name;
 
                             <li class="nav-item">
-                                <a class="nav-link text-dark fw-bold" asp-controller="Account" asp-action="Profile">
+                                <a class="nav-link fw-bold" asp-controller="Account" asp-action="Profile">
                                     Привіт, @displayName!
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <form class="form-inline" asp-controller="Account" asp-action="Logout" method="post">
-                                    <button type="submit" class="nav-link btn btn-link text-dark" style="border: none; background: none; cursor: pointer;">Вихід</button>
+                                    <button type="submit" class="nav-link btn btn-link" style="border: none; background: none; cursor: pointer;">Вихід</button>
                                 </form>
                             </li>
                         }
                         else
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Реєстрація</a>
+                                <a class="nav-link" asp-controller="Account" asp-action="Register">Реєстрація</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Вхід</a>
+                                <a class="nav-link" asp-controller="Account" asp-action="Login">Вхід</a>
                             </li>
                         }
                     </ul>
