@@ -20,20 +20,39 @@ namespace CinemaWeb.Controllers
             _context = context;
         }
 
+        private async Task<bool> IsHallBusy(int hallId, DateTime newStart, int movieId, int? excludeSessionId = null)
+        {
+            // Дізнаємося тривалість фільму, який хочемо поставити
+            var newMovie = await _context.Movies.FindAsync(movieId);
+            if (newMovie == null) return false; // Якщо фільму немає, то і конфлікту немає (технічно помилка)
+
+            // Розраховуємо час закінчення нового сеансу (+ час на прибирання, наприклад 10 хв, опціонально)
+            var newEnd = newStart.AddMinutes(newMovie.Duration);
+
+            // Шукаємо конфлікти в базі даних
+            // Логіка перетину: (StartA < EndB) і (EndA > StartB)
+            return await _context.Sessions
+                .Include(s => s.Movie)
+                .Where(s => s.HallId == hallId && s.Id != excludeSessionId) // Тільки цей зал і не цей самий сеанс (для Edit)
+                .AnyAsync(s =>
+                    newStart < s.StartTime.AddMinutes(s.Movie.Duration) &&
+                    newEnd > s.StartTime
+                );
+        }
+
         // GET: Sessions
         public async Task<IActionResult> Index()
         {
-            var cinemaDbContext = _context.Sessions.Include(s => s.Hall).Include(s => s.Movie);
-            return View(await cinemaDbContext.ToListAsync());
+            var sessions = _context.Sessions.Include(s => s.Hall).Include(s => s.Movie);
+
+            // Сортуємо: Спочатку найближчі сеанси, потім ті, що пізніше
+            return View(await sessions.OrderBy(s => s.StartTime).ToListAsync());
         }
 
         // GET: Sessions/Details/5
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var session = await _context.Sessions
                 .Include(s => s.Movie)
@@ -41,10 +60,7 @@ namespace CinemaWeb.Controllers
                 .ThenInclude(h => h.Seats)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
-            if (session == null)
-            {
-                return NotFound();
-            }
+            if (session == null) return NotFound();
 
             var takenSeatIds = await _context.Tickets
                 .Where(t => t.SessionId == session.Id)
@@ -65,8 +81,6 @@ namespace CinemaWeb.Controllers
         }
 
         // POST: Sessions/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,MovieId,HallId,StartTime")] Session session)
@@ -74,6 +88,11 @@ namespace CinemaWeb.Controllers
             if (session.StartTime < DateTime.Now)
             {
                 ModelState.AddModelError("StartTime", "Сеанс не може бути у минулому часі.");
+            }
+
+            if (await IsHallBusy(session.HallId, session.StartTime, session.MovieId))
+            {
+                ModelState.AddModelError("StartTime", "У цей час (або під час показу фільму) зал зайнятий іншим сеансом!");
             }
 
             ModelState.Remove("Movie");
@@ -94,31 +113,26 @@ namespace CinemaWeb.Controllers
         // GET: Sessions/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var session = await _context.Sessions.FindAsync(id);
-            if (session == null)
-            {
-                return NotFound();
-            }
+            if (session == null) return NotFound();
+
             ViewData["HallId"] = new SelectList(_context.Halls, "Id", "Name", session.HallId);
             ViewData["MovieId"] = new SelectList(_context.Movies, "Id", "Title", session.MovieId);
             return View(session);
         }
 
         // POST: Sessions/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,MovieId,HallId,StartTime")] Session session)
         {
-            if (id != session.Id)
+            if (id != session.Id) return NotFound();
+
+            if (await IsHallBusy(session.HallId, session.StartTime, session.MovieId, session.Id))
             {
-                return NotFound();
+                ModelState.AddModelError("StartTime", "Конфлікт часу! Зал зайнятий іншим фільмом.");
             }
 
             ModelState.Remove("Movie");
@@ -133,14 +147,8 @@ namespace CinemaWeb.Controllers
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!SessionExists(session.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    if (!SessionExists(session.Id)) return NotFound();
+                    else throw;
                 }
                 return RedirectToAction(nameof(Index));
             }
@@ -153,19 +161,14 @@ namespace CinemaWeb.Controllers
         // GET: Sessions/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var session = await _context.Sessions
                 .Include(s => s.Hall)
                 .Include(s => s.Movie)
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (session == null)
-            {
-                return NotFound();
-            }
+
+            if (session == null) return NotFound();
 
             return View(session);
         }
@@ -185,19 +188,17 @@ namespace CinemaWeb.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        
         // GET: Sessions/CreateGroup
         public IActionResult CreateGroup()
         {
             ViewData["HallId"] = new SelectList(_context.Halls, "Id", "Name");
             ViewData["MovieId"] = new SelectList(_context.Movies, "Id", "Title");
 
-            // Створюємо модель зі значеннями за замовчуванням
             var model = new GroupSessionViewModel
             {
                 StartDate = DateTime.Today,
                 EndDate = DateTime.Today.AddDays(7),
-                Time = new TimeSpan(19, 0, 0) // 19:00
+                Time = new TimeSpan(19, 0, 0)
             };
 
             return View(model);
@@ -208,18 +209,9 @@ namespace CinemaWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateGroup(GroupSessionViewModel model)
         {
-            // Валідація дат
-            if (model.EndDate < model.StartDate)
-            {
-                ModelState.AddModelError("EndDate", "Дата завершення не може бути раніше дати початку.");
-            }
+            if (model.EndDate < model.StartDate) ModelState.AddModelError("EndDate", "Дата завершення не може бути раніше дати початку.");
+            if (model.StartDate < DateTime.Today) ModelState.AddModelError("StartDate", "Дата початку не може бути в минулому.");
 
-            if (model.StartDate < DateTime.Today)
-            {
-                ModelState.AddModelError("StartDate", "Дата початку не може бути в минулому.");
-            }
-
-            // Перевірка чи вибрано хоча б один день
             var selectedDays = new List<DayOfWeek>();
             if (model.Monday) selectedDays.Add(DayOfWeek.Monday);
             if (model.Tuesday) selectedDays.Add(DayOfWeek.Tuesday);
@@ -229,10 +221,7 @@ namespace CinemaWeb.Controllers
             if (model.Saturday) selectedDays.Add(DayOfWeek.Saturday);
             if (model.Sunday) selectedDays.Add(DayOfWeek.Sunday);
 
-            if (selectedDays.Count == 0)
-            {
-                ModelState.AddModelError("", "Оберіть хоча б один день тижня.");
-            }
+            if (selectedDays.Count == 0) ModelState.AddModelError("", "Оберіть хоча б один день тижня.");
 
             if (!ModelState.IsValid)
             {
@@ -244,35 +233,27 @@ namespace CinemaWeb.Controllers
             var newSessions = new List<Session>();
             var conflictDates = new List<DateTime>();
 
-            // Проходимо по кожному дню в діапазоні
             for (var date = model.StartDate.Date; date <= model.EndDate.Date; date = date.AddDays(1))
             {
-                // Перевіряємо чи це вибраний день тижня
-                if (!selectedDays.Contains(date.DayOfWeek))
-                    continue;
+                if (!selectedDays.Contains(date.DayOfWeek)) continue;
 
                 var sessionDateTime = date + model.Time;
 
-                // Перевірка, чи не минулий час
                 if (sessionDateTime < DateTime.Now)
                 {
                     conflictDates.Add(date);
                     continue;
                 }
 
-                // Перевірка зайнятості залу
-                bool isHallBusy = await _context.Sessions
-                    .AnyAsync(s => s.HallId == model.HallId
-                        && s.StartTime.Date == date
-                        && s.StartTime.TimeOfDay == model.Time);
+                // 👇 ВИКЛИК НОВОЇ ПЕРЕВІРКИ
+                bool isBusy = await IsHallBusy(model.HallId, sessionDateTime, model.MovieId);
 
-                if (isHallBusy)
+                if (isBusy)
                 {
                     conflictDates.Add(date);
                     continue;
                 }
 
-                // Створюємо новий сеанс
                 var session = new Session
                 {
                     MovieId = model.MovieId,
@@ -283,31 +264,24 @@ namespace CinemaWeb.Controllers
                 newSessions.Add(session);
             }
 
-            // Зберігаємо сеанси
             if (newSessions.Count > 0)
             {
                 await _context.Sessions.AddRangeAsync(newSessions);
                 await _context.SaveChangesAsync();
             }
 
-            // Формуємо повідомлення
             if (conflictDates.Count > 0 && newSessions.Count > 0)
             {
                 var conflictDays = string.Join(", ", conflictDates.Select(d => d.ToString("dd.MM")));
-                TempData["Warning"] = $"Успішно створено {newSessions.Count} сеансів. " +
-                                     $"Не створено для дат: {conflictDays} (зал зайнятий або минулий час).";
+                TempData["Warning"] = $"Успішно створено {newSessions.Count} сеансів. Не створено для дат: {conflictDays} (зал зайнятий або минулий час).";
             }
             else if (newSessions.Count > 0)
             {
                 TempData["Success"] = $"Успішно створено {newSessions.Count} сеансів!";
             }
-            else if (conflictDates.Count > 0)
-            {
-                TempData["Error"] = "Не вдалося створити жодного сеансу. Усі вибрані дні зайняті або в минулому.";
-            }
             else
             {
-                TempData["Error"] = "Не вдалося створити жодного сеансу.";
+                TempData["Error"] = "Не вдалося створити жодного сеансу. Усі вибрані дні зайняті.";
             }
 
             return RedirectToAction(nameof(Index));
