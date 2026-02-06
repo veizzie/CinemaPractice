@@ -1,0 +1,270 @@
+﻿/* Підключення шрифту Inter для всього сайту */
+body {
+    font-family: "Inter", sans-serif;
+    font-optical-sizing: auto;
+}
+
+/* Налаштування висоти та центрування навігаційної панелі */
+.navbar {
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+}
+
+/* Центрування всіх елементів списку (щоб були на одній лінії з CinemaWeb) */
+.navbar-nav {
+    display: flex;
+    align-items: center !important; /* Виправляє зміщення вгору */
+    flex-direction: row;
+}
+
+/* Логотип CinemaWeb */
+.navbar-brand {
+    font-size: 1.5rem !important;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    color: #ffffff !important;
+}
+
+/* ОСНОВНІ ПОСИЛАННЯ: Головна, Адмін, Профіль, Вихід */
+.nav-link, .logout-btn {
+    font-size: 1.25rem !important; /* Збільшено з 1.0 до 1.25 для кращого вигляду */
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    line-height: 1;
+    gap: 8px;
+    color: #ffffff !important;
+    transition: all 0.4s ease-in-out;
+}
+
+    /* Примусове видалення стрілочки (dropdown toggle), якщо вона залишилась у кеші */
+    .nav-link::after {
+        display: none !important;
+    }
+
+    /* ЕФЕКТ ГЛИБОКОГО СИНЬОГО НЕОНУ (#002db3) */
+    .nav-link:hover, .logout-btn:hover {
+        color: #ffffff !important;
+        background: transparent !important;
+        text-shadow: 0 0 5px rgba(255, 255, 255, 0.6), 0 0 10px #002db3, 0 0 20px #002db3, 0 0 35px #002db3;
+    }
+
+        /* Сяйво для іконок при наведенні */
+        .nav-link:hover i, .logout-btn:hover i {
+            filter: drop-shadow(0 0 6px #002db3);
+        }
+
+/* Центрування правої частини (Профіль та Вихід) */
+.navbar-nav.ms-auto {
+    align-items: center !important;
+}
+
+/* Кнопка "Вихід" (форма) */
+.logout-btn {
+    border: none;
+    background: none;
+    font-family: inherit;
+    line-height: normal;
+    color: #ffffff !important;
+    padding: 0;
+    cursor: pointer;
+}
+
+/* Розмір іконок та їх вирівнювання */
+.nav-link i, .navbar-brand i {
+    font-size: 1.3rem;
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 2px; /* Мікро-коригування для ідеальної лінії */
+}
+
+
+/* Стилі для Home - Index.cshtml */
+/* Батьківський контейнер картки */
+.movie-card-container {
+    position: relative; /* Це дозволяє оверлею бути ПОВЕРХ картинки */
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: 15px;
+    overflow: hidden; /* Щоб картинка не вилазила при збільшенні */
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+}
+
+/* Обгортка для анімації картинки */
+.poster-wrapper {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.movie-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); /* Плавна анімація */
+}
+
+/* АНІМАЦІЯ: Збільшення картинки при наведенні на контейнер */
+.movie-card-container:hover .movie-poster {
+    transform: scale(1.15);
+}
+
+/* ОВЕРЛЕЙ: Позиціонування поверх картинки */
+.movie-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7); /* Напівпрозоре затемнення */
+    display: flex;
+    justify-content: center; /* Центрування по горизонталі */
+    align-items: center; /* Центрування по вертикалі */
+    text-align: center;
+    opacity: 0; /* Спочатку невидимий */
+    transition: opacity 0.4s ease;
+    z-index: 2;
+}
+
+.movie-card-container:hover .movie-overlay {
+    opacity: 1; /* З'являється при наведенні */
+}
+
+/* Назва: Велика, біла, посередині */
+.overlay-title-center {
+    font-size: 1.7rem !important;
+    font-weight: 800;
+    color: white;
+    text-transform: uppercase;
+    margin: 0 10px 20px 10px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+}
+
+/* Сіра плашка як на фото */
+.session-badge-container {
+    background: rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(10px);
+    padding: 10px 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.session-time-text {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: white;
+}
+
+/* Синя кнопка "Купити" */
+.buy-btn-blue {
+    background-color: #002db3 !important;
+    color: white !important;
+    font-weight: 700;
+    padding: 6px 15px !important;
+    border-radius: 8px !important;
+    text-transform: uppercase;
+    font-size: 0.85rem !important;
+    border: none !important;
+}
+
+    .buy-btn-blue:hover {
+        background-color: #003ce6 !important;
+        box-shadow: 0 0 15px rgba(0, 45, 179, 0.8);
+    }
+
+
+/* стилі для AllMovies */
+
+/* Контейнер картки */
+.archive-card-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: 15px;
+    overflow: hidden;
+    background-color: #000;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+/* Налаштування картинки */
+.archive-poster-wrapper {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.archive-movie-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease-in-out; /* Анімація збільшення */
+}
+
+/* Ефект при наведенні на картку */
+.archive-card-container:hover .archive-movie-poster {
+    transform: scale(1.1); /* Збільшення картинки */
+}
+
+/* Чорне затемнення */
+.archive-movie-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7); /* Колір затемнення */
+    opacity: 0; /* Ховаємо спочатку */
+    transition: opacity 0.3s ease;
+    padding: 15px;
+}
+
+.archive-card-container:hover .archive-movie-overlay {
+    opacity: 1; /* Показуємо при наведенні */
+}
+
+/* Назва фільму посередині */
+.archive-title {
+    color: #ffffff;
+    font-size: 1.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+/* Рік під назвою */
+.archive-year-badge {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.2rem;
+    font-weight: 500;
+    border-top: 3px solid rgba(255, 255, 255, 0.3);
+    padding-top: 5px;
+    display: inline-block; /* Дозволяє задати ширину */
+    width: 100px;
+}
+
+/* Прибираємо синє підкреслення, бо вся картка тепер посилання */
+.archive-card-link {
+    text-decoration: none !important;
+    display: block; /* Щоб посилання займало всю ширину колонки */
+}
+
+    /* Гарантуємо, що назва та рік не змінять колір */
+    .archive-card-link:hover .archive-title,
+    .archive-card-link:hover .archive-year-badge {
+        color: #ffffff;
+        text-decoration: none !important;
+    }
+
+/* Додатковий підпис знизу (опціонально) */
+.archive-more-info {
+    margin-top: 15px;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: lowercase;
+}
