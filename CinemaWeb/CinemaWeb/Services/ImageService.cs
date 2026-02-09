@@ -10,84 +10,85 @@ namespace CinemaWeb.Services
     public class ImageService : IImageService
     {
         private readonly IWebHostEnvironment _environment;
-        private readonly string _imagesFolder = "images";
-        private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".gif" };
-        private readonly long _maxFileSize = 5 * 1024 * 1024;
+
+        private const string ImagesFolder = "images";
+        private const long MaxFileSize = 5 * 1024 * 1024; // 5 MB
+
+        private static readonly string[] AllowedExtensions =
+        {
+            ".jpg", ".jpeg", ".png", ".gif"
+        };
 
         public ImageService(IWebHostEnvironment environment)
         {
             _environment = environment;
         }
 
-        // Зміна типу повернення для відповідності Інтерфейсу
         public async Task<ImageUploadResult> UploadImageAsync(IFormFile file)
         {
             try
             {
                 if (file == null || file.Length == 0)
                 {
-                    return new ImageUploadResult
-                    {
-                        Success = false,
-                        ErrorMessage = "Файл не вибрано"
-                    };
+                    return ErrorResult("Файл не вибрано");
                 }
 
-                if (file.Length > _maxFileSize)
+                if (file.Length > MaxFileSize)
                 {
-                    return new ImageUploadResult
-                    {
-                        Success = false,
-                        ErrorMessage = $"Файл занадто великий (макс. {_maxFileSize / (1024 * 1024)}MB)"
-                    };
+                    var sizeInMb = MaxFileSize / (1024 * 1024);
+                    return ErrorResult($"Файл занадто великий (макс. {sizeInMb}MB)");
                 }
 
                 var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-                if (string.IsNullOrEmpty(extension) || !_allowedExtensions.Contains(extension))
+
+                if (string.IsNullOrEmpty(extension) ||
+                    !AllowedExtensions.Contains(extension))
                 {
-                    return new ImageUploadResult
-                    {
-                        Success = false,
-                        ErrorMessage = $"Дозволені формати: {string.Join(", ", _allowedExtensions)}"
-                    };
+                    var allowed = string.Join(", ", AllowedExtensions);
+                    return ErrorResult($"Дозволені формати: {allowed}");
                 }
 
-                var uniqueFileName = $"{Guid.NewGuid()}_{DateTime.Now:yyyyMMddHHmmss}{extension}";
-                var uploadsFolder = Path.Combine(_environment.WebRootPath, _imagesFolder);
+                var uniqueFileName = GenerateUniqueFileName(extension);
+                var uploadsFolder = Path.Combine(
+                    _environment.WebRootPath,
+                    ImagesFolder);
 
                 if (!Directory.Exists(uploadsFolder))
+                {
                     Directory.CreateDirectory(uploadsFolder);
+                }
 
                 var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
-                using (var stream = new FileStream(filePath, FileMode.Create))
+                await using (var stream = new FileStream(
+                    filePath, FileMode.Create))
                 {
                     await file.CopyToAsync(stream);
                 }
 
-                // Повертаємо успішний об'єкт
                 return new ImageUploadResult
                 {
                     Success = true,
                     FileName = uniqueFileName,
-                    FilePath = $"/{_imagesFolder}/{uniqueFileName}" // Зручно мати повний шлях одразу
+                    FilePath = $"/{ImagesFolder}/{uniqueFileName}"
                 };
             }
             catch (Exception ex)
             {
-                return new ImageUploadResult
-                {
-                    Success = false,
-                    ErrorMessage = $"Помилка: {ex.Message}"
-                };
+                return ErrorResult($"Помилка: {ex.Message}");
             }
         }
 
         public bool DeleteImage(string fileName)
         {
+            if (string.IsNullOrEmpty(fileName)) return false;
+
             try
             {
-                var filePath = Path.Combine(_environment.WebRootPath, _imagesFolder, fileName);
+                var filePath = Path.Combine(
+                    _environment.WebRootPath,
+                    ImagesFolder,
+                    fileName);
 
                 if (File.Exists(filePath))
                 {
@@ -104,7 +105,21 @@ namespace CinemaWeb.Services
 
         public string GetImagePath(string fileName)
         {
-            return $"/{_imagesFolder}/{fileName}";
+            return $"/{ImagesFolder}/{fileName}";
+        }
+
+        private string GenerateUniqueFileName(string extension)
+        {
+            return $"{Guid.NewGuid()}_{DateTime.Now:yyyyMMddHHmmss}{extension}";
+        }
+
+        private ImageUploadResult ErrorResult(string message)
+        {
+            return new ImageUploadResult
+            {
+                Success = false,
+                ErrorMessage = message
+            };
         }
     }
 }

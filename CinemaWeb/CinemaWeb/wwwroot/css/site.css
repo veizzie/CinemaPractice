@@ -1,31 +1,158 @@
 html {
-  font-size: 14px;
+    font-size: 14px;
 }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
+    html {
+        font-size: 16px;
+    }
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
-}
-
-body {
-  margin-bottom: 100px;
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+    color: var(--bs-secondary-color);
+    text-align: end;
 }
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+    text-align: start;
+}
+
+main {
+    padding-bottom: 20px;
+}
+
+.footer {
+    position: static !important;
+    width: auto;
+    line-height: inherit;
+    white-space: normal;
+}
+
+.glass-panel {
+    background: rgba(30, 30, 30, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+.calendar-scroll {
+    overflow-x: auto;
+    padding-bottom: 5px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.2) transparent;
+}
+
+.calendar-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 65px;
+    height: 70px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: #ccc;
+    text-decoration: none !important;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+.calendar-day:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.calendar-day.active {
+    background: linear-gradient(135deg, #0d6efd, #0043a8);
+    border-color: #0d6efd;
+    color: white;
+    box-shadow: 0 0 15px rgba(13, 110, 253, 0.5);
+}
+
+.day-name {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.day-number {
+    font-size: 1.4rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.form-control, .form-select, .input-group-text {
+    background-color: rgba(0, 0, 0, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: white !important;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: rgba(0, 0, 0, 0.4) !important;
+    border-color: #0d6efd !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    color: white !important;
+}
+
+.form-select {
+    color-scheme: dark;
+}
+
+.form-select option {
+    background-color: #1e1e1e !important;
+    color: #ffffff !important;
+    padding: 10px;
+}
+
+.form-select option:hover,
+.form-select option:focus,
+.form-select option:active,
+.form-select option:checked {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
+}
+
+#liveSearchInput::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.details-poster {
+    width: 100%;
+    height: 550px;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+@media (max-width: 768px) {
+    .details-poster {
+        height: auto;
+        max-height: 500px;
+    }
 }

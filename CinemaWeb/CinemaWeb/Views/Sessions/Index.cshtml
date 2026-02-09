@@ -4,80 +4,137 @@
     ViewData["Title"] = "Сеанси";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="mb-0">Розклад сеансів</h1>
-    <div>
-        <a asp-action="CreateGroup" class="btn btn-primary me-2">
-            <i class="bi bi-collection-play"></i> Групове створення
-        </a>
-        <a asp-action="Create" class="btn btn-success">
-            <i class="bi bi-plus-circle"></i> Додати один сеанс
-        </a>
+<div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">Розклад сеансів</h1>
+        <div>
+            <a asp-action="CreateGroup" class="btn btn-primary me-2">
+                <i class="bi bi-collection-play"></i> Групове створення
+            </a>
+            <a asp-action="Create" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Додати один сеанс
+            </a>
+        </div>
     </div>
-</div>
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-@if (TempData["Warning"] != null)
-{
-    <div class="alert alert-warning alert-dismissible fade show" role="alert">
-        <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Warning"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="bi bi-x-circle-fill"></i> @TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Warning"] != null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Warning"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-x-circle-fill"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
 
-<div class="card shadow-sm">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead>
-                <tr>
-                    <th class="ps-4">
-                        @Html.DisplayNameFor(model => model.Movie)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.Hall)
-                    </th>
-                    <th>
-                        @Html.DisplayNameFor(model => model.StartTime)
-                    </th>
-                    <th class="text-end pe-4">Дії</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model)
-                {
+    <div class="card bg-dark text-white border-secondary mb-4 p-3 shadow-sm">
+        <form asp-action="Index" method="get">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label text-muted small">Дата сеансу</label>
+                    <input type="date" name="searchDate" class="form-control bg-dark text-white border-secondary"
+                           value="@ViewData["CurrentDate"]" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label text-muted small">Фільм</label>
+                    <select name="movieId" class="form-select bg-dark text-white border-secondary" asp-items="ViewBag.MovieId">
+                        <option value="">-- Всі фільми --</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label text-muted small">Зал</label>
+                    <select name="hallId" class="form-select bg-dark text-white border-secondary" asp-items="ViewBag.HallId">
+                        <option value="">-- Всі зали --</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="bi bi-funnel"></i> Знайти
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary w-50" title="Скинути фільтри">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="mb-3 text-muted">
+        <i class="bi bi-list-check"></i> Знайдено записів:
+        <span class="badge bg-info text-dark fs-6 ms-1">@Model.Count()</span>
+    </div>
+
+    <div class="card shadow-sm border-secondary">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0 align-middle">
+                <thead>
                     <tr>
-                        <td class="ps-4 align-middle fw-bold">
-                            @Html.DisplayFor(modelItem => item.Movie.Title)
-                        </td>
-                        <td class="align-middle">
-                            <span class="badge bg-secondary">@Html.DisplayFor(modelItem => item.Hall.Name)</span>
-                        </td>
-                        <td class="align-middle">
-                            @Html.DisplayFor(modelItem => item.StartTime)
-                        </td>
-                        <td class="text-end pe-4">
-                            <div class="btn-group" role="group">
-                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Редагувати</a>
-                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info text-white">Деталі</a>
-                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">Видалити</a>
-                            </div>
-                        </td>
+                        <th class="ps-4">
+                            @Html.DisplayNameFor(model => model.Movie)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.Hall)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.StartTime)
+                        </th>
+                        <th class="text-end pe-4">Дії</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="bi bi-search display-4 d-block mb-3 opacity-50"></i>
+                                <span>Сеансів за вибраними критеріями не знайдено.</span>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-4 fw-bold">
+                                    @Html.DisplayFor(modelItem => item.Movie.Title)
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">@Html.DisplayFor(modelItem => item.Hall.Name)</span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold">@item.StartTime.ToString("dd.MM.yyyy")</div>
+                                    <div class="small text-muted">@item.StartTime.ToString("HH:mm")</div>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Редагувати</a>
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info text-white">Деталі</a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">Видалити</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>

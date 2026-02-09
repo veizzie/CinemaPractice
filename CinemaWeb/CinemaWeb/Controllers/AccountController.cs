@@ -13,7 +13,10 @@ namespace CinemaWeb.Controllers
         private readonly SignInManager<User> _signInManager;
         private readonly CinemaDbContext _context;
 
-        public AccountController(UserManager<User> userManager, SignInManager<User> signInManager, CinemaDbContext context)
+        public AccountController(
+            UserManager<User> userManager,
+            SignInManager<User> signInManager,
+            CinemaDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -28,7 +31,13 @@ namespace CinemaWeb.Controllers
         {
             if (ModelState.IsValid)
             {
-                var user = new User { UserName = model.Email, Email = model.Email, FullName = model.FullName };
+                var user = new User
+                {
+                    UserName = model.Email,
+                    Email = model.Email,
+                    FullName = model.FullName
+                };
+
                 var result = await _userManager.CreateAsync(user, model.Password);
 
                 if (result.Succeeded)
@@ -37,6 +46,7 @@ namespace CinemaWeb.Controllers
                     await _signInManager.SignInAsync(user, isPersistent: false);
                     return RedirectToAction("Index", "Home");
                 }
+
                 foreach (var error in result.Errors)
                 {
                     ModelState.AddModelError("", error.Description);
@@ -54,7 +64,12 @@ namespace CinemaWeb.Controllers
         {
             if (ModelState.IsValid)
             {
-                var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, false);
+                var result = await _signInManager.PasswordSignInAsync(
+                    model.Email,
+                    model.Password,
+                    model.RememberMe,
+                    false);
+
                 if (result.Succeeded)
                 {
                     return RedirectToAction("Index", "Home");
@@ -72,8 +87,55 @@ namespace CinemaWeb.Controllers
             if (user == null) return RedirectToAction("Login");
 
             var model = await LoadProfileDataAsync(user);
-
             return View(model);
+        }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateProfile(UserProfileViewModel model)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login");
+
+            // Видаляємо поля, які не приходять з форми редагування профілю
+            ModelState.Remove("CurrentPassword");
+            ModelState.Remove("NewPassword");
+            ModelState.Remove("ConfirmNewPassword");
+            ModelState.Remove("Email");
+            ModelState.Remove("Role");
+            ModelState.Remove("ActiveTickets");
+            ModelState.Remove("HistoryTickets");
+
+            if (!ModelState.IsValid)
+            {
+                var refreshedModel = await LoadProfileDataAsync(user);
+                refreshedModel.FullName = model.FullName;
+                refreshedModel.PhoneNumber = model.PhoneNumber;
+
+                return View("Profile", refreshedModel);
+            }
+
+            user.FullName = model.FullName;
+            user.PhoneNumber = model.PhoneNumber;
+
+            var result = await _userManager.UpdateAsync(user);
+
+            if (result.Succeeded)
+            {
+                TempData["SuccessMessage"] = "Профіль успішно оновлено.";
+                // Оновлюємо куки, щоб нове ім'я відобразилось в шапці
+                await _signInManager.RefreshSignInAsync(user);
+                return RedirectToAction("Profile");
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError("", error.Description);
+            }
+
+            var modelWithErrors = await LoadProfileDataAsync(user);
+            return View("Profile", modelWithErrors);
         }
 
         [Authorize]
@@ -83,13 +145,24 @@ namespace CinemaWeb.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return RedirectToAction("Login");
 
+            // При зміні пароля ігноруємо валідацію полів профілю
+            ModelState.Remove("FullName");
+            ModelState.Remove("PhoneNumber");
+            ModelState.Remove("Email");
+            ModelState.Remove("Role");
+            ModelState.Remove("ActiveTickets");
+            ModelState.Remove("HistoryTickets");
+
             if (!ModelState.IsValid)
             {
                 var refreshedModel = await LoadProfileDataAsync(user);
                 return View("Profile", refreshedModel);
             }
 
-            var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+            var result = await _userManager.ChangePasswordAsync(
+                user,
+                model.CurrentPassword,
+                model.NewPassword);
 
             if (result.Succeeded)
             {
@@ -139,21 +212,31 @@ namespace CinemaWeb.Controllers
         {
             var allTickets = await _context.Tickets
                 .Include(t => t.Seat)
-                .Include(t => t.Session).ThenInclude(s => s.Movie)
-                .Include(t => t.Session).ThenInclude(s => s.Hall)
+                .Include(t => t.Session)
+                    .ThenInclude(s => s.Movie)
+                .Include(t => t.Session)
+                    .ThenInclude(s => s.Hall)
                 .Where(t => t.UserId == user.Id)
                 .OrderByDescending(t => t.Session.StartTime)
                 .ToListAsync();
+
+            var roles = await _userManager.GetRolesAsync(user);
 
             var model = new UserProfileViewModel
             {
                 FullName = user.FullName,
                 Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
                 IsEmailConfirmed = user.EmailConfirmed,
-                Role = (await _userManager.GetRolesAsync(user)).FirstOrDefault() ?? "User",
+                Role = roles.FirstOrDefault() ?? "User",
 
-                ActiveTickets = allTickets.Where(t => t.Session.StartTime > DateTime.Now).ToList(),
-                HistoryTickets = allTickets.Where(t => t.Session.StartTime <= DateTime.Now).ToList()
+                ActiveTickets = allTickets
+                    .Where(t => t.Session.StartTime > DateTime.Now)
+                    .ToList(),
+
+                HistoryTickets = allTickets
+                    .Where(t => t.Session.StartTime <= DateTime.Now)
+                    .ToList()
             };
 
             return model;

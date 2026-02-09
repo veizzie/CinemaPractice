@@ -15,12 +15,10 @@ namespace CinemaWeb.Controllers
     public class UsersController : Controller
     {
         private readonly UserManager<User> _userManager;
-        private readonly RoleManager<IdentityRole<int>> _roleManager;
 
-        public UsersController(UserManager<User> userManager, RoleManager<IdentityRole<int>> roleManager)
+        public UsersController(UserManager<User> userManager)
         {
             _userManager = userManager;
-            _roleManager = roleManager;
         }
 
         public async Task<IActionResult> Index()
@@ -59,25 +57,30 @@ namespace CinemaWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Email,FullName,Role")] User model)
+        public async Task<IActionResult> Edit(
+            int id,
+            [Bind("Id,Email,FullName,Role")] User model)
         {
             var user = await _userManager.FindByIdAsync(id.ToString());
             if (user == null) return NotFound();
 
-            // --- ЗАХИСТ ГОЛОВНОГО АДМІНІСТРАТОРА ---
-            if (user.Email.Equals("admin@cinemaweb.com", StringComparison.OrdinalIgnoreCase) && model.Role != "Admin")
+            bool isMainAdmin = user.Email.Equals(
+                "admin@cinemaweb.com",
+                StringComparison.OrdinalIgnoreCase);
+
+            if (isMainAdmin && model.Role != "Admin")
             {
-                ModelState.AddModelError("Role", "Неможливо зняти права адміністратора з головного облікового запису.");
+                ModelState.AddModelError("Role",
+                    "Неможливо зняти права адміністратора " +
+                    "з головного облікового запису.");
             }
 
-            // --- ЗАХИСТ ВІД ЗНЯТТЯ АДМІНКИ З САМОГО СЕБЕ ---
-            // Отримуємо ID поточного користувача (того, хто натискає кнопку)
             var currentUserId = _userManager.GetUserId(User);
 
-            // Якщо редагуємо свій власний акаунт і намагаємося змінити роль не на Admin
             if (user.Id.ToString() == currentUserId && model.Role != "Admin")
             {
-                ModelState.AddModelError("Role", "Ви не можете позбавити прав адміністратора самі себе.");
+                ModelState.AddModelError("Role",
+                    "Ви не можете позбавити прав адміністратора самі себе.");
             }
 
             if (ModelState.IsValid)
@@ -87,14 +90,18 @@ namespace CinemaWeb.Controllers
                 user.FullName = model.FullName;
 
                 var result = await _userManager.UpdateAsync(user);
+
                 if (result.Succeeded)
                 {
                     var currentRoles = await _userManager.GetRolesAsync(user);
 
                     if (!currentRoles.Contains(model.Role))
                     {
-                        await _userManager.RemoveFromRolesAsync(user, currentRoles);
-                        await _userManager.AddToRoleAsync(user, model.Role);
+                        await _userManager.RemoveFromRolesAsync(
+                            user, currentRoles);
+
+                        await _userManager.AddToRoleAsync(
+                            user, model.Role);
                     }
                     return RedirectToAction(nameof(Index));
                 }
@@ -110,6 +117,7 @@ namespace CinemaWeb.Controllers
                 new SelectListItem { Value = "User", Text = "Користувач" },
                 new SelectListItem { Value = "Admin", Text = "Адміністратор" }
             };
+
             return View(model);
         }
     }

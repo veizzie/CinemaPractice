@@ -25,6 +25,8 @@ public partial class Hall
     [Display(Name = "Місць у ряду")]
     public byte ColsCount { get; set; }
 
+    public bool IsArchived { get; set; } = false;
+
     public virtual ICollection<Seat> Seats { get; set; } = new List<Seat>();
 
     public virtual ICollection<Session> Sessions { get; set; } = new List<Session>();

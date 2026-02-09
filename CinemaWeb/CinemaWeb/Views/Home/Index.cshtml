@@ -1,56 +1,205 @@
 ﻿@model IEnumerable<CinemaWeb.Models.Movie>
+@using System.Globalization
 
 @{
     ViewData["Title"] = "Афіша";
+    var selectedDate = ViewData["SelectedDate"] as DateTime?;
+    var today = DateTime.Today;
+    var culture = new CultureInfo("uk-UA");
 }
 
-<div class="text-center mb-5">
+<div class="text-center mt-4 mb-4 fade-in">
     <h1 class="display-4 fw-bold">Зараз у кіно</h1>
-    <p class="lead text-muted">Актуальні сеанси</p>
+    <p class="lead text-muted">
+        @if (selectedDate.HasValue)
+        {
+            <span>Сеанси на @selectedDate.Value.ToString("d MMMM", culture)</span>
+        }
+        else
+        {
+            <span>Актуальні сеанси</span>
+        }
+    </p>
 </div>
 
-<div class="row">
-    @foreach (var movie in Model)
-    {
-        var nearestSession = movie.Sessions?
-        .Where(s => s.StartTime > DateTime.Now)
-        .OrderBy(s => s.StartTime)
-        .FirstOrDefault();
-
-        <div class="col-md-3 col-sm-6 mb-4">
-            <div class="movie-card-container">
-                <div class="poster-wrapper">
-                    <img src="@movie.PosterUrl" class="movie-poster" alt="@movie.Title">
-                </div>
-
-                <div class="movie-overlay">
-                    <div class="overlay-inner">
-                        <h3 class="overlay-title-center">@movie.Title</h3>
-
-                        <div class="session-section mt-3">
-                            <p class="session-label-large mb-2">Найближчий сеанс:</p>
-                            @if (nearestSession != null)
-                            {
-                                <div class="session-badge-container d-inline-flex align-items-center gap-3">
-                                    <span class="session-time-text">@nearestSession.StartTime.ToString("HH:mm")</span>
-                                    <a asp-controller="Home" asp-action="Details" asp-route-id="@movie.Id"
-                                       class="btn buy-btn-blue">
-                                        Купити
-                                    </a>
-                                </div>
-                            }
+<div class="container mb-5 fade-in">
+    <div class="glass-panel p-4 rounded-4">
+        <div class="row align-items-end g-3">
+            <div class="col-lg-5 col-md-12">
+                <form id="filterForm" asp-controller="Home" asp-action="Index" method="get">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <div class="input-group">
+                                <span class="input-group-text bg-transparent border-secondary text-white"><i class="fas fa-search"></i></span>
+                                <input type="text" id="liveSearchInput" class="form-control bg-transparent text-white border-secondary"
+                                       placeholder="Назва фільму..." autocomplete="off">
+                            </div>
                         </div>
+                        <div class="col-6">
+                            <select id="genreSelect" class="form-select bg-transparent text-white border-secondary">
+                                <option value="">Всі жанри</option>
+                                @if (ViewBag.Genres != null)
+                                {
+                                    foreach (var genre in ViewBag.Genres)
+                                    {
+                                        <!option value="@genre">@genre</!option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <select id="yearSelect" class="form-select bg-transparent text-white border-secondary">
+                                <option value="">Всі роки</option>
+                                @if (ViewBag.Years != null)
+                                {
+                                    foreach (var year in ViewBag.Years)
+                                    {
+                                        <!option value="@year">@year</!option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="col-lg-7 col-md-12">
+                <div class="d-flex flex-column h-100 justify-content-end align-items-lg-end">
+                    <p class="text-white-50 mb-2 small text-uppercase fw-bold text-lg-end w-100">
+                        <i class="fas fa-calendar-alt me-1"></i> Розклад на тиждень:
+                    </p>
+                    <div class="calendar-scroll d-flex gap-2 pb-1 justify-content-lg-end w-100">
+                        <a href="@Url.Action("Index")"
+                           class="calendar-day glass-btn @(selectedDate == null ? "active" : "")">
+                            <span class="day-name">Всі</span>
+                            <span class="day-number"><i class="fas fa-Infinity"></i></span>
+                        </a>
+                        @for (int i = 0; i < 7; i++)
+                        {
+                            var date = today.AddDays(i);
+                            bool isActive = selectedDate.HasValue && selectedDate.Value.Date == date.Date;
+                            <a href="@Url.Action("Index", new { selectedDate = date.ToString("yyyy-MM-dd") })"
+                               class="calendar-day glass-btn @(isActive ? "active" : "")">
+                                <span class="day-name">@date.ToString("ddd", culture)</span>
+                                <span class="day-number">@date.Day</span>
+                            </a>
+                        }
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<hr class="border-secondary mb-5 opacity-25" />
+
+<div class="row" id="moviesContainer">
+    @if (!Model.Any())
+    {
+        <div class="col-12 text-center py-5">
+            <i class="bi bi-film display-1 text-muted"></i>
+            <h3 class="mt-3 text-white">Фільмів не знайдено</h3>
+            <p class="text-muted">На цю дату сеансів немає.</p>
+            <a asp-action="Index" class="btn btn-outline-light mt-2">Показати всі дні</a>
+        </div>
+    }
+    else
+    {
+        @foreach (var movie in Model)
+        {
+            var targetSession = movie.Sessions?
+            .Where(s => s.StartTime > DateTime.Now)
+            .Where(s => selectedDate == null || s.StartTime.Date == selectedDate.Value.Date)
+            .OrderBy(s => s.StartTime)
+            .FirstOrDefault();
+
+            var genresString = string.Join(", ", movie.Moviegenres.Select(mg => mg.Genre.Name));
+
+            <div class="col-md-3 col-sm-6 mb-4 movie-item fade-in"
+                 data-title="@movie.Title.ToLower()"
+                 data-year="@movie.ReleaseDate.Year"
+                 data-genres="@genresString">
+
+                <div class="movie-card-container">
+                    <div class="poster-wrapper">
+                        <img src="@movie.PosterUrl" class="movie-poster" alt="@movie.Title">
+                    </div>
+
+                    <div class="movie-overlay">
+                        <div class="overlay-inner d-flex flex-column justify-content-center align-items-center h-100 text-center p-3">
+                            <h3 class="overlay-title-center mb-1">@movie.Title</h3>
+                            <small class="text-warning mb-3 text-uppercase fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">
+                                @genresString
+                            </small>
+
+                            <div class="session-section mt-2">
+                                @if (targetSession != null)
+                                {
+                                    <p class="session-label-large mb-2 text-white-50">
+                                        @(selectedDate != null ? "Час сеансу:" : "Найближчий:")
+                                    </p>
+
+                                    <div class="session-badge-container d-flex flex-column gap-2 align-items-center">
+                                        <span class="session-time-text display-6 fw-bold">
+                                            @targetSession.StartTime.ToString("HH:mm")
+                                        </span>
+                                        @if (selectedDate == null)
+                                        {
+                                            <span class="badge bg-dark border border-secondary text-muted">
+                                                @targetSession.StartTime.ToString("dd.MM")
+                                            </span>
+                                        }
+
+                                        @if (!User.IsInRole("Admin"))
+                                        {
+                                            <a asp-controller="Home" asp-action="Details" asp-route-id="@movie.Id"
+                                               class="btn buy-btn-blue mt-2 px-4">
+                                                Розклад / Купити
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <a asp-controller="Home" asp-action="Details" asp-route-id="@movie.Id"
+                                               class="btn btn-outline-light mt-2 px-4">
+                                                Деталі
+                                            </a>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-muted opacity-75">
+                                        <i class="far fa-clock mb-2 display-6"></i>
+                                        <p>Немає сеансів</p>
+                                    </div>
+                                    <a asp-controller="Home" asp-action="Details" asp-route-id="@movie.Id"
+                                       class="btn btn-outline-light btn-sm mt-3">
+                                        Деталі
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
     }
 </div>
 
+<div id="noResults" class="text-center mt-5" style="display: none;">
+    <i class="bi bi-search display-1 text-muted"></i>
+    <h3 class="mt-3 text-white">Фільмів не знайдено</h3>
+    <p class="text-muted">Спробуйте змінити параметри пошуку</p>
+</div>
+
 <div class="text-center mt-5 mb-5">
-    <hr />
+    <hr class="border-secondary opacity-25" />
     <p class="text-muted">Не знайшли те, що шукали?</p>
     <a asp-action="AllMovies" class="btn btn-outline-secondary btn-lg">
-        Переглянути архів усіх фільмів
+        <i class="fas fa-archive me-2"></i> Переглянути архів усіх фільмів
     </a>
 </div>
+
+@section Scripts {
+    <script src="~/js/home-index.js" asp-append-version="true"></script>
+}

@@ -23,23 +23,21 @@ namespace CinemaWeb.Controllers
         // GET: Halls
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Halls.ToListAsync());
+            // Сортуємо: спочатку активні, потім архівні
+            return View(await _context.Halls
+                .OrderBy(h => h.IsArchived)
+                .ToListAsync());
         }
 
         // GET: Halls/Details/5
         public async Task<IActionResult> Details(byte? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var hall = await _context.Halls
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (hall == null)
-            {
-                return NotFound();
-            }
+
+            if (hall == null) return NotFound();
 
             return View(hall);
         }
@@ -53,29 +51,25 @@ namespace CinemaWeb.Controllers
         // POST: Halls/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        // Додав RowsCount, ColsCount у Bind та параметр SelectedSeats для реалізації вибору місць
-        public async Task<IActionResult> Create([Bind("Id,Name,RowsCount,ColsCount")] Hall hall, string SelectedSeats)
+        public async Task<IActionResult> Create(
+            [Bind("Id,Name,RowsCount,ColsCount")] Hall hall,
+            string SelectedSeats)
         {
-            // Перевірка, чи є вже зал з такою назвою
             if (await _context.Halls.AnyAsync(h => h.Name == hall.Name))
             {
                 ModelState.AddModelError("Name", "Такий зал вже існує!");
             }
 
-            // Обробка сітки місць
             List<Seat> seatsToAdd = new List<Seat>();
 
             if (!string.IsNullOrEmpty(SelectedSeats))
             {
-                // Тут розбивка рядка на окремі координати "1-1, 1-2, 2-4" і т.д.
                 var coords = SelectedSeats.Split(',');
-
                 foreach (var coord in coords)
                 {
                     var parts = coord.Split('-');
                     if (parts.Length == 2)
                     {
-                        // Створюю ою'єкт місця в пам'яті
                         seatsToAdd.Add(new Seat
                         {
                             Row = byte.Parse(parts[0]),
@@ -85,14 +79,13 @@ namespace CinemaWeb.Controllers
                 }
             }
 
-            // Зробив автоматичний розрахунок місткості
             hall.Capacity = (short)seatsToAdd.Count;
             ModelState.Remove("Capacity");
 
-            // Перевірка ліміту
             if (hall.Capacity > 150)
             {
-                ModelState.AddModelError("", $"Занадто велика зала! Максимум 150 місць, а ви намалювали {hall.Capacity}");
+                ModelState.AddModelError("",
+                    $"Занадто велика зала! Максимум 150 місць, а ви намалювали {hall.Capacity}");
                 return View(hall);
             }
 
@@ -101,13 +94,11 @@ namespace CinemaWeb.Controllers
                 _context.Add(hall);
                 await _context.SaveChangesAsync();
 
-                // Прив'язка місця до залу
                 foreach (var seat in seatsToAdd)
                 {
                     seat.HallId = hall.Id;
                 }
 
-                // Збереження місць
                 if (seatsToAdd.Count > 0)
                 {
                     _context.Seats.AddRange(seatsToAdd);
@@ -124,15 +115,12 @@ namespace CinemaWeb.Controllers
         {
             if (id == null) return NotFound();
 
-            // Завантаження залу РАЗОМ з місцями
             var hall = await _context.Halls
                 .Include(h => h.Seats)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
             if (hall == null) return NotFound();
 
-            // Формування списку координат існуючих місць ("1-1,1-2,2-5")
-            // Щоб JS знав, які квадратики малювати зеленими
             var existingSeatsCoords = hall.Seats
                 .Select(s => s.Row + "-" + s.Number)
                 .ToArray();
@@ -145,25 +133,24 @@ namespace CinemaWeb.Controllers
         // POST: Halls/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(byte id, [Bind("Id,Name,RowsCount,ColsCount")] Hall hall, string SelectedSeats)
+        public async Task<IActionResult> Edit(
+            byte id,
+            [Bind("Id,Name,RowsCount,ColsCount")] Hall hall,
+            string SelectedSeats)
         {
             if (id != hall.Id) return NotFound();
 
-            // Отримання актуальних місць з бази (щоб знати, що видаляти)
             var hallInDb = await _context.Halls
                 .Include(h => h.Seats)
                 .FirstOrDefaultAsync(h => h.Id == id);
 
             if (hallInDb == null) return NotFound();
 
-            // Парсинг нових координати з форми
             var newSeatCoords = string.IsNullOrEmpty(SelectedSeats)
                 ? new HashSet<string>()
                 : SelectedSeats.Split(',').ToHashSet();
 
-            // Логіка СИНХРОНІЗАЦІЇ
-
-            // А) Видалення місць, яких більше немає в новій схемі
+            // Видаляємо старі місця
             var seatsToDelete = hallInDb.Seats
                 .Where(s => !newSeatCoords.Contains(s.Row + "-" + s.Number))
                 .ToList();
@@ -173,13 +160,15 @@ namespace CinemaWeb.Controllers
                 _context.Seats.RemoveRange(seatsToDelete);
             }
 
-            // Б) Додавання нових місць, яких раніше не було
-            var existingCoords = hallInDb.Seats.Select(s => s.Row + "-" + s.Number).ToHashSet();
+            // Додаємо нові
+            var existingCoords = hallInDb.Seats
+                .Select(s => s.Row + "-" + s.Number)
+                .ToHashSet();
+
             var seatsToAdd = new List<Seat>();
 
             foreach (var coord in newSeatCoords)
             {
-                // Якщо такого місця ще немає в базі - створюємо
                 if (!existingCoords.Contains(coord))
                 {
                     var parts = coord.Split('-');
@@ -197,23 +186,18 @@ namespace CinemaWeb.Controllers
                 _context.Seats.AddRange(seatsToAdd);
             }
 
-            // Оновлення параметрів залу
             hallInDb.Name = hall.Name;
             hallInDb.RowsCount = hall.RowsCount;
             hallInDb.ColsCount = hall.ColsCount;
-
-            // Перераховуємо місткість: (старі - видалені + нові)
             hallInDb.Capacity = (short)(hallInDb.Seats.Count - seatsToDelete.Count + seatsToAdd.Count);
 
-            ModelState.Remove("Capacity"); // Ігноруємо помилку валідації
+            ModelState.Remove("Capacity");
 
             if (hallInDb.Capacity > 150)
             {
-                ModelState.AddModelError("", $"Занадто велика зала! Максимум 150 місць, а ви намалювали {hallInDb.Capacity}");
-
-                var existingSeatsCoords = hallInDb.Seats.Select(s => s.Row + "-" + s.Number).ToArray();
-                ViewBag.ExistingSeats = string.Join(",", existingSeatsCoords);
-
+                ModelState.AddModelError("", $"Занадто велика зала! Максимум 150 місць.");
+                var coords = hallInDb.Seats.Select(s => s.Row + "-" + s.Number).ToArray();
+                ViewBag.ExistingSeats = string.Join(",", coords);
                 return View(hall);
             }
 
@@ -236,17 +220,12 @@ namespace CinemaWeb.Controllers
         // GET: Halls/Delete/5
         public async Task<IActionResult> Delete(byte? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var hall = await _context.Halls
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (hall == null)
-            {
-                return NotFound();
-            }
+
+            if (hall == null) return NotFound();
 
             return View(hall);
         }
@@ -256,22 +235,40 @@ namespace CinemaWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(byte id)
         {
-            var hall = await _context.Halls
-                .Include(h => h.Seats)
-                .FirstOrDefaultAsync(h => h.Id == id);
-
-            if (hall != null)
+            var hall = await _context.Halls.FindAsync(id);
+            if (hall == null)
             {
-                // Видалення місць
-                if (hall.Seats != null && hall.Seats.Any())
-                {
-                    _context.Seats.RemoveRange(hall.Seats);
-                }
-
-                // Тепер видаляємо зал
-                _context.Halls.Remove(hall);
-                await _context.SaveChangesAsync();
+                return RedirectToAction(nameof(Index));
             }
+
+            // Перевірка: чи є майбутні сеанси з проданими квитками?
+            var hasActiveTickets = await _context.Tickets
+                .Include(t => t.Session)
+                .AnyAsync(t => t.Session.HallId == id && t.Session.StartTime > DateTime.Now);
+
+            if (hasActiveTickets)
+            {
+                ViewBag.ErrorMessage =
+                    "Неможливо архівувати зал! У ньому заплановані сеанси, на які вже продано квитки.";
+                return View("Delete", hall);
+            }
+
+            // Видаляємо пусті майбутні сеанси
+            var futureEmptySessions = await _context.Sessions
+                .Where(s => s.HallId == id && s.StartTime > DateTime.Now)
+                .ToListAsync();
+
+            if (futureEmptySessions.Any())
+            {
+                _context.Sessions.RemoveRange(futureEmptySessions);
+            }
+
+            // Архівуємо зал
+            hall.IsArchived = true;
+            _context.Halls.Update(hall);
+
+            await _context.SaveChangesAsync();
+
             return RedirectToAction(nameof(Index));
         }
 

@@ -1,39 +1,61 @@
 ﻿@model CinemaWeb.Models.Hall
 
 @{
-    ViewData["Title"] = "Видалення";
+    ViewData["Title"] = "Архівування залу";
 }
 
-<div class="row justify-content-center">
+<div class="row justify-content-center mt-4">
     <div class="col-md-6">
         <div class="card border-danger shadow-sm">
-            <div class="card-header bg-danger text-white">
-                <h4 class="mb-0">Видалення залу</h4>
+            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="bi bi-door-closed"></i> Архівування залу</h4>
             </div>
             <div class="card-body">
-                <h5 class="card-title text-danger">Ви впевнені, що хочете видалити цей зал?</h5>
-                <p class="card-text text-muted">Цю дію неможливо скасувати.</p>
-                <hr />
-                <dl class="row">
-                    <dt class="col-sm-4">
-                        @Html.DisplayNameFor(model => model.Name)
-                    </dt>
-                    <dd class="col-sm-8 fw-bold">
-                        @Html.DisplayFor(model => model.Name)
-                    </dd>
 
-                    <dt class="col-sm-4">
-                        @Html.DisplayNameFor(model => model.Capacity)
-                    </dt>
-                    <dd class="col-sm-8">
-                        @Html.DisplayFor(model => model.Capacity)
-                    </dd>
+                @if (ViewBag.ErrorMessage != null)
+                {
+                    <div class="alert alert-danger d-flex align-items-center" role="alert">
+                        <i class="bi bi-x-circle-fill fs-4 me-2"></i>
+                        <div>
+                            <strong>Дія заборонена!</strong><br />
+                            @ViewBag.ErrorMessage
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <h5 class="card-title text-danger text-center">Ви впевнені, що хочете закрити цей зал?</h5>
+                    <div class="alert alert-warning text-center border-warning mt-3">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Зал зникне зі списку для нових сеансів.<br />
+                            Майбутні сеанси <strong>без квитків</strong> будуть скасовані.<br />
+                            Статистика та історія збережуться.
+                        </small>
+                    </div>
+                }
+
+                <hr />
+                <dl class="row fs-5">
+                    <dt class="col-sm-4 text-muted">Назва</dt>
+                    <dd class="col-sm-8 fw-bold">@Html.DisplayFor(model => model.Name)</dd>
+
+                    <dt class="col-sm-4 text-muted">Місткість</dt>
+                    <dd class="col-sm-8">@Html.DisplayFor(model => model.Capacity) місць</dd>
                 </dl>
 
-                <form asp-action="Delete" class="mt-3">
+                <form asp-action="Delete" class="mt-4 text-end">
                     <input type="hidden" asp-for="Id" />
-                    <input type="submit" value="Так, видалити" class="btn btn-danger" />
-                    <a asp-action="Index" class="btn btn-secondary">Ні, повернутися</a>
+
+                    <a asp-action="Index" class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-arrow-left"></i> Скасувати
+                    </a>
+
+                    @if (ViewBag.ErrorMessage == null)
+                    {
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-archive-fill"></i> Так, архівувати
+                        </button>
+                    }
                 </form>
             </div>
         </div>
