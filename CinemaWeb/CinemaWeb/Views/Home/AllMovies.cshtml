@@ -1,18 +1,43 @@
 ﻿@model IEnumerable<CinemaWeb.Models.Movie>
 
 @{
-    ViewData["Title"] = "Афіша";
+    ViewData["Title"] = "Архів фільмів";
 }
 
-<div class="text-center mb-5">
-    <h1 class="display-4 fw-bold">Архів</h1>
-    <p class="lead text-muted">Топові фільми</p>
+<div class="text-center mt-4 mb-4 fade-in">
+    <h1 class="display-4 fw-bold">Архів кінотеатру</h1>
+    <p class="lead text-muted">Вся історія показів</p>
 </div>
 
-<div class="row">
+<div class="container mb-5 fade-in">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="glass-panel p-2 rounded-4">
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text bg-transparent border-0 text-white ms-2">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text"
+                           id="liveSearchInput"
+                           class="form-control bg-transparent border-0 text-white shadow-none"
+                           placeholder="Почніть вводити назву фільму..."
+                           autocomplete="off">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="moviesContainer">
     @foreach (var movie in Model)
     {
-        <div class="col-md-3 col-sm-6 mb-4">
+        var genresString = string.Join(", ", movie.Moviegenres.Select(mg => mg.Genre.Name));
+
+        <div class="col-md-3 col-sm-6 mb-4 movie-item fade-in"
+             data-title="@movie.Title.ToLower()"
+             data-year="@movie.ReleaseDate.Year"
+             data-genres="@genresString.ToLower()">
+
             <a asp-controller="Home" asp-action="Details" asp-route-id="@movie.Id" class="text-decoration-none">
                 <div class="archive-card-container">
                     <div class="archive-poster-wrapper">
@@ -20,11 +45,17 @@
                     </div>
 
                     <div class="archive-movie-overlay">
-                        <div class="d-flex flex-column justify-content-center align-items-center h-100 text-center">
+                        <div class="d-flex flex-column justify-content-center align-items-center h-100 text-center p-2">
                             <h3 class="archive-title">@movie.Title</h3>
+
+                            <div class="small text-warning text-uppercase fw-bold mb-2" style="font-size: 0.7rem; letter-spacing: 1px;">
+                                @string.Join(", ", movie.Moviegenres.Select(mg => mg.Genre.Name))
+                            </div>
                             <div class="archive-year-badge">@movie.ReleaseDate.Year</div>
 
-                            <div class="mt-3 small text-white-50">Дивитися деталі</div>
+                            <div class="mt-3 small text-white-50">
+                                <i class="bi bi-eye"></i> Деталі
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -33,10 +64,20 @@
     }
 </div>
 
+<div id="noResults" class="text-center mt-5" style="display: none;">
+    <i class="bi bi-emoji-frown display-1 text-muted"></i>
+    <h3 class="mt-3 text-white">Нічого не знайдено</h3>
+    <p class="text-muted">Спробуйте змінити запит</p>
+</div>
+
 <div class="text-center mt-5 mb-5">
-    <hr />
+    <hr class="border-secondary opacity-25" />
     <p class="text-muted">Хочете повернутися?</p>
     <a asp-action="Index" class="btn btn-outline-secondary btn-lg">
-        Переглянути актуальні сеанси
+        <i class="bi bi-calendar-event me-2"></i> Переглянути актуальні сеанси
     </a>
 </div>
+
+@section Scripts {
+    <script src="~/js/archive.js" asp-append-version="true"></script>
+}

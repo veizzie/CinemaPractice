@@ -23,11 +23,19 @@ namespace CinemaWeb.ViewModels
 
         [DataType(DataType.Password)]
         [Display(Name = "Новий пароль")]
+        [StringLength(100, ErrorMessage = "{0} повинен мати мінімум {2} символів.", MinimumLength = 8)]
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$",
+            ErrorMessage = "Пароль має містити: мінімум 8 символів, велику літеру, цифру та спец. символ")]
         public string NewPassword { get; set; }
 
         [DataType(DataType.Password)]
         [Display(Name = "Підтвердження пароля")]
         [Compare("NewPassword", ErrorMessage = "Паролі не співпадають.")]
         public string ConfirmNewPassword { get; set; }
+
+        [Display(Name = "Номер телефону")]
+        [Phone(ErrorMessage = "Некоректний формат телефону")]
+        [RegularExpression(@"^(\+?380|0)?\d{9}$", ErrorMessage = "Введіть номер у форматі +380xxxxxxxxx")]
+        public string? PhoneNumber { get; set; }
     }
 }

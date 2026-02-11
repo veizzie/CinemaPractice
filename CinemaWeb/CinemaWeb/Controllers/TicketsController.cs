@@ -21,37 +21,81 @@ namespace CinemaWeb.Controllers
             _context = context;
         }
 
-        // GET: Tickets (Для адміна - всі, для юзера - свої)
-        public async Task<IActionResult> Index()
+        // GET: Tickets
+        public async Task<IActionResult> Index(
+            DateTime? searchDate,
+            int? movieId,
+            int? hallId)
         {
-            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            int userId = int.Parse(userIdStr);
-
-            var query = _context.Tickets
+            var ticketsQuery = _context.Tickets
                 .Include(t => t.Seat)
-                .Include(t => t.Session).ThenInclude(s => s.Movie)
-                .Include(t => t.Session).ThenInclude(s => s.Hall)
+                .Include(t => t.Session)
+                    .ThenInclude(s => s.Movie)
+                .Include(t => t.Session)
+                    .ThenInclude(s => s.Hall)
                 .Include(t => t.User)
                 .AsQueryable();
 
             if (!User.IsInRole("Admin"))
             {
-                query = query.Where(t => t.UserId == userId);
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                int userId = int.Parse(userIdStr);
+                ticketsQuery = ticketsQuery.Where(t => t.UserId == userId);
             }
 
-            return View(await query.OrderByDescending(t => t.PurchaseDate).ToListAsync());
+            // Фільтр по даті сеансу
+            if (searchDate.HasValue)
+            {
+                ticketsQuery = ticketsQuery
+                    .Where(t => t.Session.StartTime.Date == searchDate.Value.Date);
+            }
+
+            // Фільтр по фільму
+            if (movieId.HasValue)
+            {
+                ticketsQuery = ticketsQuery
+                    .Where(t => t.Session.MovieId == movieId);
+            }
+
+            // Фільтр по залу
+            if (hallId.HasValue)
+            {
+                ticketsQuery = ticketsQuery
+                    .Where(t => t.Session.HallId == hallId);
+            }
+
+            // Сортування: Спочатку найсвіжіші покупки (або сеанси)
+            ticketsQuery = ticketsQuery
+                .OrderByDescending(t => t.Session.StartTime);
+
+            ViewData["MovieId"] = new SelectList(
+                _context.Movies, "Id", "Title", movieId);
+
+            ViewData["HallId"] = new SelectList(
+                _context.Halls, "Id", "Name", hallId);
+
+            ViewData["CurrentDate"] = searchDate?.ToString("yyyy-MM-dd");
+
+            return View(await ticketsQuery.ToListAsync());
         }
 
         // GET: Tickets/Create?sessionId
         [HttpGet]
         public async Task<IActionResult> Create(int? sessionId)
         {
+            if (User.IsInRole("Admin"))
+            {
+                TempData["Error"] = "Адміністратори не можуть купувати квитки! " +
+                                    "Зайдіть як звичайний користувач.";
+                return RedirectToAction("Index", "Home");
+            }
+
             if (sessionId == null) return NotFound();
 
             var session = await _context.Sessions
                 .Include(s => s.Movie)
                 .Include(s => s.Hall)
-                .ThenInclude(h => h.Seats)
+                    .ThenInclude(h => h.Seats)
                 .FirstOrDefaultAsync(s => s.Id == sessionId);
 
             if (session == null) return NotFound();
@@ -61,11 +105,15 @@ namespace CinemaWeb.Controllers
                 .Select(t => new { t.SeatId, t.UserId })
                 .ToListAsync();
 
-            var takenSeatIds = sessionTickets.Select(t => t.SeatId).ToList();
+            var takenSeatIds = sessionTickets
+                .Select(t => t.SeatId)
+                .ToList();
+
             var mySeatIds = new List<int>();
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            if (!string.IsNullOrEmpty(userIdStr) && int.TryParse(userIdStr, out int userId))
+            if (!string.IsNullOrEmpty(userIdStr)
+                && int.TryParse(userIdStr, out int userId))
             {
                 mySeatIds = sessionTickets
                     .Where(t => t.UserId == userId)
@@ -83,21 +131,32 @@ namespace CinemaWeb.Controllers
         // POST: Tickets/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(int sessionId, string selectedSeatIds)
+        public async Task<IActionResult> Create(
+            int sessionId,
+            string selectedSeatIds)
         {
+            if (User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
             if (string.IsNullOrEmpty(selectedSeatIds))
             {
                 return RedirectToAction("Create", new { sessionId = sessionId });
             }
 
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userIdStr)) return RedirectToAction("Login", "Account");
+            if (string.IsNullOrEmpty(userIdStr))
+                return RedirectToAction("Login", "Account");
+
             int userId = int.Parse(userIdStr);
 
             List<int> seatIds;
             try
             {
-                seatIds = selectedSeatIds.Split(',').Select(int.Parse).ToList();
+                seatIds = selectedSeatIds.Split(',')
+                    .Select(int.Parse)
+                    .ToList();
             }
             catch
             {
@@ -105,11 +164,13 @@ namespace CinemaWeb.Controllers
             }
 
             var alreadyTaken = await _context.Tickets
-                .AnyAsync(t => t.SessionId == sessionId && seatIds.Contains(t.SeatId));
+                .AnyAsync(t => t.SessionId == sessionId
+                               && seatIds.Contains(t.SeatId));
 
             if (alreadyTaken)
             {
-                TempData["Error"] = "На жаль, одне з обраних місць вже було придбано кимось іншим щойно!";
+                TempData["Error"] = "На жаль, одне з обраних місць вже " +
+                                    "було придбано кимось іншим щойно!";
                 return RedirectToAction("Create", new { sessionId = sessionId });
             }
 
@@ -132,7 +193,6 @@ namespace CinemaWeb.Controllers
             return RedirectToAction("Profile", "Account");
         }
 
-        // GET: Tickets/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
@@ -158,7 +218,6 @@ namespace CinemaWeb.Controllers
             return View(ticket);
         }
 
-        // POST: Tickets/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -178,7 +237,8 @@ namespace CinemaWeb.Controllers
 
             var ticket = await _context.Tickets
                 .Include(t => t.Seat)
-                .Include(t => t.Session).ThenInclude(s => s.Movie)
+                .Include(t => t.Session)
+                    .ThenInclude(s => s.Movie)
                 .Include(t => t.User)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
@@ -186,6 +246,7 @@ namespace CinemaWeb.Controllers
 
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             int userId = int.Parse(userIdStr);
+
             if (!User.IsInRole("Admin") && ticket.UserId != userId)
             {
                 return Forbid();

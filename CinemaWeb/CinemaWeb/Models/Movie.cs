@@ -23,5 +23,9 @@ public partial class Movie
 
     public decimal Price { get; set; }
 
+    public bool IsArchived { get; set; } = false;
+
     public virtual ICollection<Session> Sessions { get; set; } = new List<Session>();
+
+    public virtual ICollection<Moviegenre> Moviegenres { get; set; } = new List<Moviegenre>();
 }

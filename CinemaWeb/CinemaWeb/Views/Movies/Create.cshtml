@@ -100,17 +100,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 
-    <script>
-        new TomSelect("#genre-select", {
-            plugins: ['remove_button'],
-            create: false,
-            maxItems: null,
-            placeholder: "Пошук жанрів...",
+    <script src="~/js/genre-select.js" asp-append-version="true"></script>
 
-            onItemAdd: function() {
-                this.setTextboxValue('');
-                this.refreshOptions();
-            },
-        });
-    </script>
+    <script src="~/js/validation-localization.js" asp-append-version="true"></script>
 }

@@ -1,73 +1,144 @@
 ﻿@model IEnumerable<CinemaWeb.Models.Ticket>
 
 @{
-    ViewData["Title"] = "Всі квитки (Адмін)";
+    ViewData["Title"] = "Управління квитками";
+
+    // Рахуємо загальну суму для відображених квитків
+    // (використовуємо null-coalescing ?? 0 на випадок збоїв у даних)
+    decimal totalSum = Model.Sum(t => t.Session?.Movie?.Price ?? 0);
 }
 
-<div class="container mt-4">
+<div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-shield-lock-fill text-danger"></i> Управління квитками</h2>
-        <span class="badge bg-dark">Всього продано: @Model.Count()</span>
+        <h2>
+            <i class="bi bi-shield-lock-fill text-danger"></i> Управління квитками
+        </h2>
     </div>
 
-    <div class="card shadow-sm">
+    <div class="card bg-dark text-white border-secondary mb-4 p-3 shadow-sm">
+        <form asp-action="Index" method="get">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label text-muted small">Дата сеансу</label>
+                    <input type="date" name="searchDate" class="form-control bg-dark text-white border-secondary"
+                           value="@ViewData["CurrentDate"]" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label text-muted small">Фільм</label>
+                    <select name="movieId" class="form-select bg-dark text-white border-secondary" asp-items="ViewBag.MovieId">
+                        <option value="">-- Всі фільми --</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label text-muted small">Зал</label>
+                    <select name="hallId" class="form-select bg-dark text-white border-secondary" asp-items="ViewBag.HallId">
+                        <option value="">-- Всі зали --</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="bi bi-funnel"></i> Знайти
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary w-50" title="Скинути фільтри">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-6 d-flex gap-3 align-items-center text-white-50">
+            <div>
+                <i class="bi bi-receipt"></i> Продано квитків:
+                <span class="badge bg-light text-dark fs-6 ms-1">@Model.Count()</span>
+            </div>
+            <div>
+                <i class="bi bi-cash-stack"></i> Загальна сума:
+                <span class="badge bg-success fs-6 ms-1">@totalSum.ToString("N2") грн</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm bg-dark text-white border-secondary">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-striped table-hover mb-0 align-middle">
-                    <thead class="table-dark">
+                <table class="table table-dark table-hover mb-0 align-middle">
+                    <thead>
                         <tr>
-                            <th>ID</th>
+                            <th class="ps-3">ID</th>
                             <th>Користувач</th>
                             <th>Фільм</th>
                             <th>Сеанс</th>
                             <th>Місце</th>
                             <th>Ціна</th>
+                            <th class="text-end pe-3">Дії</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var item in Model)
+                        @if (!Model.Any())
                         {
                             <tr>
-                                <td>@item.Id</td>
-                                <td>
-                                    <div class="fw-bold">@item.User.FullName</div>
-                                    <small class="text-muted">@item.User.Email</small>
-                                </td>
-                                <td>
-                                    @if (item.Session?.Movie != null)
-                                    {
-                                        <img src="@item.Session.Movie.PosterUrl" style="width: 30px; height: 45px; object-fit: cover;" class="rounded me-1">
-                                        @item.Session.Movie.Title
-                                    }
-                                </td>
-                                <td>
-                                    @if (item.Session != null)
-                                    {
-                                        <div>@item.Session.StartTime.ToString("dd.MM.yyyy")</div>
-                                        <small class="text-muted">@item.Session.StartTime.ToString("HH:mm")</small>
-                                    }
-                                </td>
-                                <td>
-                                    @if (item.Session?.Hall != null && item.Seat != null)
-                                    {
-                                        <div>@item.Session.Hall.Name</div>
-                                        <small class="text-muted">Ряд @item.Seat.Row, Місце @item.Seat.Number</small>
-                                    }
-                                </td>
-                                <td class="fw-bold text-success">
-                                    @(item.Session?.Movie?.Price ?? 0) грн
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    <i class="bi bi-search display-6 d-block mb-3 opacity-50"></i>
+                                    Квитків за вибраними критеріями не знайдено.
                                 </td>
                             </tr>
+                        }
+                        else
+                        {
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td class="ps-3 text-muted small">#@item.Id</td>
+                                    <td>
+                                        <div class="fw-bold">@item.User.FullName</div>
+                                        <small class="text-muted" style="font-size: 0.8em;">@item.User.Email</small>
+                                    </td>
+                                    <td>
+                                        @if (item.Session?.Movie != null)
+                                        {
+                                            <div class="d-flex align-items-center">
+                                                <img src="@item.Session.Movie.PosterUrl" style="width: 30px; height: 45px; object-fit: cover;" class="rounded me-2 bg-secondary">
+                                                <span>@item.Session.Movie.Title</span>
+                                            </div>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (item.Session != null)
+                                        {
+                                            <div class="fw-bold">@item.Session.StartTime.ToString("dd.MM.yyyy")</div>
+                                            <small class="text-muted">@item.Session.StartTime.ToString("HH:mm")</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (item.Session?.Hall != null && item.Seat != null)
+                                        {
+                                            <div>@item.Session.Hall.Name</div>
+                                            <span class="badge bg-secondary border border-secondary text-light">
+                                                Ряд @item.Seat.Row, Місце @item.Seat.Number
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="fw-bold text-success">
+                                        @(item.Session?.Movie?.Price.ToString("N2") ?? "0.00") грн
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger" title="Скасувати квиток">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
                         }
                     </tbody>
                 </table>
             </div>
-            @if (!Model.Any())
-            {
-                <div class="text-center py-5 text-muted">
-                    Квитків ще не продано.
-                </div>
-            }
         </div>
     </div>
 </div>

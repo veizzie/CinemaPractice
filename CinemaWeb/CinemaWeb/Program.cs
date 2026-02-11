@@ -1,11 +1,12 @@
 using CinemaWeb.Models;
 using CinemaWeb.Services;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddDbContext<CinemaDbContext>(options =>
@@ -13,12 +14,11 @@ builder.Services.AddDbContext<CinemaDbContext>(options =>
 
 builder.Services.AddIdentity<User, IdentityRole<int>>(options =>
 {
-    // Налаштування паролів (спрощені для розробки)
-    options.Password.RequireDigit = false;
-    options.Password.RequireLowercase = false;
-    options.Password.RequireUppercase = false;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequiredLength = 4;
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequiredLength = 8;
 })
     .AddEntityFrameworkStores<CinemaDbContext>()
     .AddDefaultTokenProviders();
@@ -27,18 +27,26 @@ builder.Services.AddScoped<IImageService, ImageService>();
 
 var app = builder.Build();
 
-//Автоматична перевірка наявності бази даних та її створення при відсутності
+var defaultDateCulture = "uk-UA";
+var ci = new CultureInfo(defaultDateCulture);
+ci.NumberFormat.NumberDecimalSeparator = ",";
+ci.NumberFormat.CurrencyDecimalSeparator = ",";
+
+var localizationOptions = new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture(ci),
+    SupportedCultures = new List<CultureInfo> { ci },
+    SupportedUICultures = new List<CultureInfo> { ci }
+};
+
+// Автоматична перевірка наявності бази даних
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
         var context = services.GetRequiredService<CinemaDbContext>();
-
-        // Автоматичне Update-Database
         context.Database.Migrate();
-
-        // Викликаємо сіяч для створення ролей та адміністратора
         DbInitializer.SeedRolesAndAdminAsync(services).Wait();
     }
     catch (Exception ex)
@@ -52,23 +60,18 @@ using (var scope = app.Services.CreateScope())
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-app.UseRouting();
-
-app.UseAuthentication();
-
-app.UseAuthorization();
-
 app.UseStaticFiles();
+app.UseRouting();
+app.UseRequestLocalization(localizationOptions);
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
-
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();

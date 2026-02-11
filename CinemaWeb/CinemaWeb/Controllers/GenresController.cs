@@ -36,6 +36,7 @@ namespace CinemaWeb.Controllers
 
             var genre = await _context.Genres
                 .FirstOrDefaultAsync(m => m.Id == id);
+
             if (genre == null)
             {
                 return NotFound();
@@ -55,8 +56,8 @@ namespace CinemaWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,Name")] Genre genre)
         {
-            // Перевірка наявності жанру з таким самим ім'ям
-            bool genreExists = await _context.Genres.AnyAsync(g => g.Name == genre.Name);
+            bool genreExists = await _context.Genres
+                .AnyAsync(g => g.Name == genre.Name);
 
             if (genreExists)
             {
@@ -98,8 +99,9 @@ namespace CinemaWeb.Controllers
                 return NotFound();
             }
 
-            // Щоб не перейменувати жанр на той, що вже існує
-            bool genreExists = await _context.Genres.AnyAsync(g => g.Name == genre.Name && g.Id != genre.Id);
+            bool genreExists = await _context.Genres
+                .AnyAsync(g => g.Name == genre.Name && g.Id != genre.Id);
+
             if (genreExists)
             {
                 ModelState.AddModelError("Name", "Такий жанр вже існує!");
@@ -138,6 +140,7 @@ namespace CinemaWeb.Controllers
 
             var genre = await _context.Genres
                 .FirstOrDefaultAsync(m => m.Id == id);
+
             if (genre == null)
             {
                 return NotFound();
@@ -154,10 +157,15 @@ namespace CinemaWeb.Controllers
             var genre = await _context.Genres.FindAsync(id);
             if (genre != null)
             {
+                var relatedLinks = _context.Moviegenres
+                    .Where(mg => mg.GenreId == id);
+
+                _context.Moviegenres.RemoveRange(relatedLinks);
                 _context.Genres.Remove(genre);
+
+                await _context.SaveChangesAsync();
             }
 
-            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 

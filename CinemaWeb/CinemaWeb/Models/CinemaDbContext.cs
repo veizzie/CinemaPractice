@@ -92,19 +92,19 @@ public partial class CinemaDbContext : IdentityDbContext<User, IdentityRole<int>
 
         modelBuilder.Entity<Moviegenre>(entity =>
         {
-            entity.HasKey(e => new {e.MovieId, e.GenreId }).HasName("PK__moviegen__C6D8E3B2D3B8F1E3");
+            entity.HasKey(e => new { e.MovieId, e.GenreId }).HasName("PK__moviegen__C6D8E3B2D3B8F1E3");
 
             entity.ToTable("moviegenres");
 
             entity.Property(e => e.GenreId).HasColumnName("genre_id");
             entity.Property(e => e.MovieId).HasColumnName("movie_id");
 
-            entity.HasOne(d => d.Genre).WithMany()
+            entity.HasOne(d => d.Genre).WithMany(p => p.Moviegenres)
                 .HasForeignKey(d => d.GenreId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("moviegenres_fk1");
 
-            entity.HasOne(d => d.Movie).WithMany()
+            entity.HasOne(d => d.Movie).WithMany(p => p.Moviegenres)
                 .HasForeignKey(d => d.MovieId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("moviegenres_fk0");
