@@ -85,7 +85,8 @@ namespace CinemaWeb.Controllers
             if (hall.Capacity > 150)
             {
                 ModelState.AddModelError("",
-                    $"Занадто велика зала! Максимум 150 місць, а ви намалювали {hall.Capacity}");
+                    $"Занадто велика зала! Максимум 150 місць, " +
+                    $"а ви намалювали {hall.Capacity}");
                 return View(hall);
             }
 
@@ -146,9 +147,38 @@ namespace CinemaWeb.Controllers
 
             if (hallInDb == null) return NotFound();
 
+            // 1. Формуємо список нових координат
             var newSeatCoords = string.IsNullOrEmpty(SelectedSeats)
                 ? new HashSet<string>()
                 : SelectedSeats.Split(',').ToHashSet();
+
+            // 2. Отримуємо поточні координати з БД
+            var existingSeatCoords = hallInDb.Seats
+                .Select(s => s.Row + "-" + s.Number)
+                .ToHashSet();
+
+            // 3. Перевіряємо, чи змінилася конфігурація місць
+            bool isLayoutChanged = !newSeatCoords.SetEquals(existingSeatCoords);
+
+            if (isLayoutChanged)
+            {
+                // Якщо схема змінилася, перевіряємо, чи є майбутні сеанси
+                bool hasActiveSessions = await _context.Sessions
+                    .AnyAsync(s => s.HallId == id
+                                   && s.StartTime > DateTime.Now);
+
+                if (hasActiveSessions)
+                {
+                    ModelState.AddModelError("",
+                        "Неможливо змінити розстановку місць! " +
+                        "У цьому залі є заплановані сеанси. " +
+                        "Зміна конфігурації може призвести до помилок.");
+
+                    ViewBag.ExistingSeats = string.Join(",",
+                        existingSeatCoords);
+                    return View(hall);
+                }
+            }
 
             // Видаляємо старі місця
             var seatsToDelete = hallInDb.Seats
@@ -160,16 +190,12 @@ namespace CinemaWeb.Controllers
                 _context.Seats.RemoveRange(seatsToDelete);
             }
 
-            // Додаємо нові
-            var existingCoords = hallInDb.Seats
-                .Select(s => s.Row + "-" + s.Number)
-                .ToHashSet();
-
+            // Додаємо нові місця
             var seatsToAdd = new List<Seat>();
 
             foreach (var coord in newSeatCoords)
             {
-                if (!existingCoords.Contains(coord))
+                if (!existingSeatCoords.Contains(coord))
                 {
                     var parts = coord.Split('-');
                     seatsToAdd.Add(new Seat
@@ -186,18 +212,22 @@ namespace CinemaWeb.Controllers
                 _context.Seats.AddRange(seatsToAdd);
             }
 
+            // Оновлюємо властивості залу
             hallInDb.Name = hall.Name;
             hallInDb.RowsCount = hall.RowsCount;
             hallInDb.ColsCount = hall.ColsCount;
-            hallInDb.Capacity = (short)(hallInDb.Seats.Count - seatsToDelete.Count + seatsToAdd.Count);
+
+            // Перераховуємо місткість
+            hallInDb.Capacity = (short)(hallInDb.Seats.Count -
+                seatsToDelete.Count + seatsToAdd.Count);
 
             ModelState.Remove("Capacity");
 
             if (hallInDb.Capacity > 150)
             {
-                ModelState.AddModelError("", $"Занадто велика зала! Максимум 150 місць.");
-                var coords = hallInDb.Seats.Select(s => s.Row + "-" + s.Number).ToArray();
-                ViewBag.ExistingSeats = string.Join(",", coords);
+                ModelState.AddModelError("",
+                    "Занадто велика зала! Максимум 150 місць.");
+                ViewBag.ExistingSeats = string.Join(",", existingSeatCoords);
                 return View(hall);
             }
 
@@ -212,8 +242,19 @@ namespace CinemaWeb.Controllers
                     if (!HallExists(hall.Id)) return NotFound();
                     else throw;
                 }
+                catch (DbUpdateException)
+                {
+                    ModelState.AddModelError("",
+                        "Помилка збереження. Можливо, на видалені місця " +
+                        "існують посилання у квитках.");
+                    ViewBag.ExistingSeats = string.Join(",",
+                        existingSeatCoords);
+                    return View(hall);
+                }
                 return RedirectToAction(nameof(Index));
             }
+
+            ViewBag.ExistingSeats = string.Join(",", existingSeatCoords);
             return View(hall);
         }
 
@@ -244,12 +285,14 @@ namespace CinemaWeb.Controllers
             // Перевірка: чи є майбутні сеанси з проданими квитками?
             var hasActiveTickets = await _context.Tickets
                 .Include(t => t.Session)
-                .AnyAsync(t => t.Session.HallId == id && t.Session.StartTime > DateTime.Now);
+                .AnyAsync(t => t.Session.HallId == id
+                               && t.Session.StartTime > DateTime.Now);
 
             if (hasActiveTickets)
             {
                 ViewBag.ErrorMessage =
-                    "Неможливо архівувати зал! У ньому заплановані сеанси, на які вже продано квитки.";
+                    "Неможливо архівувати зал! У ньому заплановані сеанси, " +
+                    "на які вже продано квитки.";
                 return View("Delete", hall);
             }
 
